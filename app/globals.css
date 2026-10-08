@@ -109,3 +109,5 @@
   .recChartWrap{height:390px;margin:8px 0 12px;padding-right:0;overflow:hidden}
   .recChartWrap>div{width:100%!important;min-width:0!important}
 }
+.recAxisControl{min-width:230px}.recAxisFields{min-width:310px}.axisFieldRow{display:flex;align-items:center;gap:6px}.axisFieldRow .compactInput{width:135px}.axisFieldRow .compactInput input{width:100%}.recAxisStatus{min-width:220px}.axisWarn{color:#b45309!important}
+@media(max-width:600px){.recAxisControl,.recAxisFields,.recAxisStatus{width:100%;min-width:0}.axisFieldRow{display:grid;grid-template-columns:1fr auto 1fr}.axisFieldRow .compactInput{width:100%}}

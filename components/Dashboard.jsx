@@ -9,9 +9,21 @@ const three=new Intl.NumberFormat('ko-KR',{minimumFractionDigits:3,maximumFracti
 function localIso(d=new Date()){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${day}`}
 function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
 function presets(){const now=new Date(),dow=(now.getDay()+6)%7,monday=addDays(now,-dow),prevMon=addDays(monday,-7),prevSun=addDays(monday,-1),y=now.getFullYear(),m=now.getMonth();const q=Math.floor(m/3)*3,h=m<6?0:6;return{
-  all:[new Date(2023,0,1),now],today:[now,now],yesterday:[addDays(now,-1),addDays(now,-1)],thisWeek:[monday,now],lastWeek:[prevMon,prevSun],thisMonth:[new Date(y,m,1),now],lastMonth:[new Date(y,m-1,1),new Date(y,m,0)],quarter:[new Date(y,q,1),now],half:[new Date(y,h,1),now],thisYear:[new Date(y,0,1),now],lastYear:[new Date(y-1,0,1),new Date(y-1,11,31)]
+  all:[new Date(2023,0,1),now],
+  today:[now,now],
+  yesterday:[addDays(now,-1),addDays(now,-1)],
+  thisWeek:[monday,now],
+  lastWeek:[prevMon,prevSun],
+  thisMonth:[new Date(y,m,1),now],
+  lastMonth:[new Date(y,m-1,1),new Date(y,m,0)],
+  quarter:[new Date(y,q,1),now],
+  half:[new Date(y,h,1),now],
+  thisYear:[new Date(y,0,1),now],
+  thisSeasonYear:[new Date(y-1,11,1),new Date(y,10,30)],
+  lastYear:[new Date(y-1,0,1),new Date(y-1,11,31)],
+  lastSeasonYear:[new Date(y-2,11,1),new Date(y-1,10,30)]
 }}
-const presetButtons=[['all','전체'],['today','오늘'],['yesterday','전일'],['thisWeek','금주'],['lastWeek','전주'],['thisMonth','당월'],['lastMonth','전월'],['quarter','분기'],['half','반기'],['thisYear','당해'],['lastYear','전해'],['custom','직접선택']];
+const presetButtons=[['today','오늘'],['yesterday','전일'],['thisWeek','금주'],['lastWeek','전주'],['thisMonth','당월'],['lastMonth','전월'],['quarter','분기'],['half','반기'],['thisYear','당해'],['thisSeasonYear','당해(계절)'],['lastYear','전해'],['lastSeasonYear','전해(계절)'],['all','전체'],['custom','직접선택']];
 const barMetricLabels={revenue:'수익',kwh:'발전량'};
 const lineMetricLabels={smp:'SMP',efficiency:'설비이용률',generationHours:'발전시간'};
 const inverterLabels={total:'합계',inv1:'인버터1',inv2:'인버터2',both:'인버터1+2'};
@@ -23,10 +35,11 @@ function formatPeriodLabel(v,grain){
   if(grain==='day'){const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[1]}년 ${m[2]}월 ${m[3]}일`:s}
   if(grain==='month'){const m=s.match(/^(\d{4})-(\d{2})/);return m?`${m[1]}년 ${m[2]}월`:s}
   if(grain==='quarter'){const m=s.match(/^(\d{4})-Q([1-4])/);return m?`${m[1]}년 ${m[2]}분기`:s.replace(' Q','년 ')+'분기'}
+  if(grain==='season'){const m=s.match(/^(\d{4})-S-(spring|summer|autumn|winter)$/);if(m){const names={spring:'봄',summer:'여름',autumn:'가을',winter:'겨울'};return `${m[1]}년 ${names[m[2]]}`}const m2=s.match(/^(\d{4})\s+(봄|여름|가을|겨울)$/);return m2?`${m2[1]}년 ${m2[2]}`:s}
   if(grain==='year'){const m=s.match(/^(\d{4})/);return m?`${m[1]}년`:s}
   return s;
 }
-function formatRecPeriodLabel(v,mode){const s=String(v||'');if(mode==='year')return /^\d{4}$/.test(s)?`${s}년`:s;if(mode==='quarter'){const m=s.match(/^(\d{4}) Q([1-4])$/);return m?`${m[1]}년 ${m[2]}분기`:s}const m=s.match(/^(\d{4})-(\d{2})$/);return m?`${m[1]}년 ${m[2]}월`:s}
+function formatRecPeriodLabel(v,mode){const s=String(v||'');if(mode==='year')return /^\d{4}$/.test(s)?`${s}년`:s;if(mode==='quarter'){const m=s.match(/^(\d{4}) Q([1-4])$/);return m?`${m[1]}년 ${m[2]}분기`:s}if(mode==='season'){const m=s.match(/^(\d{4}) (봄|여름|가을|겨울)$/);return m?`${m[1]}년 ${m[2]}`:s}const m=s.match(/^(\d{4})-(\d{2})$/);return m?`${m[1]}년 ${m[2]}월`:s}
 
 function formatExtremaValue(v,name=''){
   const n=Number(v);if(!Number.isFinite(n))return'-';
@@ -69,8 +82,8 @@ function applyExtremaMarkers(series,x,showMax,showMin){
     }};
   });
 }
-function recChartGrain(grain){return grain==='year'?'year':grain==='quarter'?'quarter':'month'}
-function recPeriodKey(month,mode){const m=String(month||'').match(/^(\d{4})-(\d{2})$/);if(!m)return String(month||'');const y=Number(m[1]),mo=Number(m[2]);if(mode==='year')return String(y);if(mode==='quarter')return`${y} Q${Math.floor((mo-1)/3)+1}`;return`${y}-${String(mo).padStart(2,'0')}`}
+function recChartGrain(grain){return grain==='year'?'year':grain==='quarter'?'quarter':grain==='season'?'season':'month'}
+function recPeriodKey(month,mode){const m=String(month||'').match(/^(\d{4})-(\d{2})$/);if(!m)return String(month||'');const y=Number(m[1]),mo=Number(m[2]);if(mode==='year')return String(y);if(mode==='quarter')return`${y} Q${Math.floor((mo-1)/3)+1}`;if(mode==='season'){if(mo>=3&&mo<=5)return`${y} 봄`;if(mo>=6&&mo<=8)return`${y} 여름`;if(mo>=9&&mo<=11)return`${y} 가을`;if(mo===12)return`${y+1} 겨울`;return`${y} 겨울`}return`${y}-${String(mo).padStart(2,'0')}`}
 function aggregateRecChartRows(rows,mode){
   const groups=new Map();
   for(const r of(Array.isArray(rows)?rows:[])){
@@ -112,6 +125,9 @@ export default function Dashboard(){
   const [recBarMetric,setRecBarMetric]=useState('issuance');
   const [recPriceMode,setRecPriceMode]=useState('current');
   const [recPriceDate,setRecPriceDate]=useState(localIso());
+  const [recPriceAxisMode,setRecPriceAxisMode]=useState('auto');
+  const [recPriceAxisMin,setRecPriceAxisMin]=useState('');
+  const [recPriceAxisMax,setRecPriceAxisMax]=useState('');
   const [recPriceLookup,setRecPriceLookup]=useState(null);
   const [recPriceLoading,setRecPriceLoading]=useState(false);
   const [recTxnForm,setRecTxnForm]=useState({id:'',date:localIso(),qty:'',amount:'',note:''});
@@ -129,6 +145,16 @@ export default function Dashboard(){
     }catch{}
   },[]);
   useEffect(()=>{try{const r=localStorage.getItem('solar_rec_supply_ratio_pct');if(r!==null)setRecSupplyRatioPct(r)}catch{}},[]);
+  useEffect(()=>{
+    try{
+      const mode=localStorage.getItem('solar_rec_axis_mode');
+      const mn=localStorage.getItem('solar_rec_axis_min');
+      const mx=localStorage.getItem('solar_rec_axis_max');
+      if(mode==='manual'||mode==='auto')setRecPriceAxisMode(mode);
+      if(mn!==null)setRecPriceAxisMin(mn);
+      if(mx!==null)setRecPriceAxisMax(mx);
+    }catch{}
+  },[]);
   useEffect(()=>{setRecVisible(10)},[start,end,compare,grain]);
   useEffect(()=>{
     if(recPriceMode!=='date'){setRecPriceLookup(null);return}
@@ -226,6 +252,30 @@ export default function Dashboard(){
   const recCurrentPrice=data?.rec?.market?.ok?(data.rec.market.avg??data.rec.market.close??null):null;
   const recValuationPrice=recPriceMode==='date'?(recPriceLookup?.ok?(recPriceLookup.avg??recPriceLookup.close??null):null):recCurrentPrice;
   const recValuationDate=recPriceMode==='date'?(recPriceLookup?.actualDate||recPriceDate):(data?.rec?.market?.date||null);
+  const recAutoPriceAxis=useMemo(()=>{
+    const mode=recChartGrain(grain);
+    const all=[];
+    const collect=(rows)=>{for(const r of aggregateRecChartRows(Array.isArray(rows)?rows:[],mode)){const v=Number(r?.price);if(Number.isFinite(v)&&v>0)all.push(v)}};
+    collect(data?.rec?.series||[]);
+    for(const c of(Array.isArray(data?.rec?.comparisons)?data.rec.comparisons:[]))collect(c?.series||[]);
+    if(!all.length)return{min:null,max:null,dataMin:null,dataMax:null};
+    const dataMin=Math.min(...all),dataMax=Math.max(...all);
+    let min=Math.floor((dataMin*0.9)/100)*100;
+    let max=Math.ceil((dataMax*1.1)/100)*100;
+    min=Math.max(0,min);
+    if(max<=min)max=min+100;
+    return{min,max,dataMin,dataMax};
+  },[data?.rec?.series,data?.rec?.comparisons,grain]);
+  const recManualAxisValid=useMemo(()=>{
+    if(String(recPriceAxisMin).trim()===''||String(recPriceAxisMax).trim()==='')return false;
+    const mn=Number(recPriceAxisMin),mx=Number(recPriceAxisMax);
+    return Number.isFinite(mn)&&Number.isFinite(mx)&&mn>=0&&mx>mn;
+  },[recPriceAxisMin,recPriceAxisMax]);
+  const recPriceAxisBounds=recPriceAxisMode==='manual'&&recManualAxisValid
+    ?{min:Number(recPriceAxisMin),max:Number(recPriceAxisMax),manual:true}
+    :{...recAutoPriceAxis,manual:false};
+  const saveRecAxisMode=(v)=>{setRecPriceAxisMode(v);try{localStorage.setItem('solar_rec_axis_mode',v)}catch{}};
+  const saveRecAxisValue=(which,v)=>{const c=String(v).replace(/[^0-9]/g,'');if(which==='min')setRecPriceAxisMin(c);else setRecPriceAxisMax(c);try{localStorage.setItem(which==='min'?'solar_rec_axis_min':'solar_rec_axis_max',c)}catch{}};
   const recOption=useMemo(()=>{
     const mode=recChartGrain(grain);
     const rows=aggregateRecChartRows(Array.isArray(data?.rec?.series)?data.rec.series:[],mode);
@@ -254,10 +304,10 @@ export default function Dashboard(){
       animation:false,legend:{type:'scroll',top:0,left:8,right:8},grid:{left:10,right:10,top:52,bottom:60,containLabel:true},
       tooltip:{trigger:'axis',confine:true,formatter:(items)=>{const arr=Array.isArray(items)?items:[];const idx=arr[0]?.dataIndex??0;const lines=[`<b>${x[idx]||''} 동기간 비교</b>`];for(const it of arr){const raw=it?.data?.value??it?.value,sourceMonth=it?.data?.sourceMonth||'',priceDate=it?.data?.priceDate||'';if(it.seriesName.includes('REC 발급량'))lines.push(`${it.marker} ${it.seriesName}: ${two.format(Number(raw||0))} REC${sourceMonth?` <span style="color:#94a3b8">(${sourceMonth})</span>`:''}`);else if(it.seriesName.includes('REC 평가금액'))lines.push(`${it.marker} ${it.seriesName}: ${nf.format(Number(raw||0))} 원${sourceMonth?` <span style="color:#94a3b8">(${sourceMonth})</span>`:''}`);else if(it.seriesName.includes('REC 평균가'))lines.push(`${it.marker} ${it.seriesName}: ${raw==null?'-':`${nf.format(Number(raw))} 원/REC`}${sourceMonth?` <span style="color:#94a3b8">(${sourceMonth})</span>`:''}${priceDate?` · ${priceDate}`:''}`)}return lines.join('<br/>')}},
       xAxis:{type:'category',data:x,axisLabel:{hideOverlap:true,margin:10}},
-      yAxis:[{type:'value',name:amountMode?'원':'REC',nameLocation:'end',nameGap:6,min:0,nameTextStyle:{align:'left',padding:[0,0,4,0]},axisLabel:{formatter:v=>amountMode?nf.format(v):Number(v).toFixed(0),margin:8}},{type:'value',name:'원/REC',nameLocation:'end',nameGap:6,position:'right',min:0,nameTextStyle:{align:'right',padding:[0,0,4,0]},axisLabel:{formatter:v=>nf.format(v),margin:8}}],
+      yAxis:[{type:'value',name:amountMode?'원':'REC',nameLocation:'end',nameGap:6,min:0,nameTextStyle:{align:'left',padding:[0,0,4,0]},axisLabel:{formatter:v=>amountMode?nf.format(v):Number(v).toFixed(0),margin:8}},{type:'value',name:'원/REC',nameLocation:'end',nameGap:6,position:'right',min:recPriceAxisBounds.min??undefined,max:recPriceAxisBounds.max??undefined,nameTextStyle:{align:'right',padding:[0,0,4,0]},axisLabel:{formatter:v=>nf.format(v),margin:8}}],
       dataZoom:x.length>4?[{type:'inside',xAxisIndex:0,filterMode:'none'},{type:'slider',xAxisIndex:0,bottom:8,height:20,filterMode:'none',showDetail:false}]:[],series:applyExtremaMarkers(series,x,showMaxPoint,showMinPoint)
     };
-  },[data?.rec?.series,data?.rec?.comparisons,recBarMetric,recValuationPrice,grain,showMaxPoint,showMinPoint]);
+  },[data?.rec?.series,data?.rec?.comparisons,recBarMetric,recValuationPrice,grain,showMaxPoint,showMinPoint,recPriceAxisBounds.min,recPriceAxisBounds.max]);
   const recChartKey=useMemo(()=>`rec-${grain}-${start}-${end}-${compare.join('-')}-${data?.rec?.series?.length||0}-${data?.rec?.comparisons?.length||0}-${data?.rec?.market?.date||''}`,[grain,start,end,compare,data?.rec?.series?.length,data?.rec?.comparisons?.length,data?.rec?.market?.date]);
   const toggleCompare=n=>setCompare(v=>v.includes(n)?v.filter(x=>x!==n):[...v,n].sort());
   const selectedEfficiency=data?.kpi?.[inverterMode==='inv1'?'efficiency1':inverterMode==='inv2'?'efficiency2':'efficiency'];
@@ -266,7 +316,7 @@ export default function Dashboard(){
   const recRowsSorted=useMemo(()=>aggregateRecTableRows(data?.rec?.series||[],recTableMode).sort((a,b)=>String(b?.period||'').localeCompare(String(a?.period||''))),[data?.rec?.series,recTableMode]);
   const recRowsVisible=recRowsSorted.slice(0,recVisible);
   const recRowsRemaining=Math.max(0,recRowsSorted.length-recVisible);
-  const recPeriodLabel=recTableMode==='year'?'발전연도':recTableMode==='quarter'?'발전분기':'발전월';
+  const recPeriodLabel=recTableMode==='year'?'발전연도':recTableMode==='quarter'?'발전분기':recTableMode==='season'?'발전계절':'발전월';
   const recTransactions=useMemo(()=>[...(data?.rec?.ledger?.transactions||[])].sort((a,b)=>String(b?.date||'').localeCompare(String(a?.date||''))||String(b?.updatedAt||'').localeCompare(String(a?.updatedAt||''))),[data?.rec?.ledger?.transactions]);
   const recSelectedValuationAmount=recValuationPrice==null?null:Math.round(Number(data?.rec?.estimatedRec||0)*Number(recValuationPrice));
 
@@ -276,7 +326,7 @@ export default function Dashboard(){
 
   <section className="card capacityCard"><div className="capacityTitle"><div><b>인버터 정격용량</b><span>설비이용률(CF)과 등가 발전시간 계산에 사용됩니다.</span></div><div className="capacityTotal">합계 <strong>{totalCap?`${one.format(totalCap)} kW`:'미설정'}</strong></div></div><div className="capacityInputs"><label>인버터 1 <input inputMode="decimal" value={cap1} onChange={e=>saveCapacity(1,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><label>인버터 2 <input inputMode="decimal" value={cap2} onChange={e=>saveCapacity(2,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><div className="formula">설비이용률 = 발전량 ÷ (정격용량 × 24시간 × 일수) × 100 · 등가 발전시간 = 발전량 ÷ 정격용량</div></div></section>
 
-  <section className="controls card stickyControls"><div className="presetRow">{presetButtons.map(([k,t])=><button key={k} className={periodPreset===k?'preset active':'preset'} onClick={()=>applyPreset(k)}>{t}</button>)}</div><div className="controlRow"><div className="control"><label>집계</label><div className="segments">{[['hour','시간'],['day','일'],['month','월'],['quarter','분기'],['year','년']].map(([v,t])=><button key={v} className={grain===v?'active':''} onClick={()=>setGrain(v)}>{t}</button>)}</div></div><div className="control"><label>막대 그래프</label><div className="segments metricSeg">{[['revenue','수익'],['kwh','발전량']].map(([v,t])=><button key={v} className={barMetric===v?'active':''} onClick={()=>setBarMetric(v)}>{t}</button>)}</div></div><div className="control"><label>라인 그래프</label><div className="segments metricSeg">{[['smp','SMP'],['efficiency','설비이용률'],['generationHours','발전시간']].map(([v,t])=><button key={v} className={lineMetric===v?'active':''} onClick={()=>setLineMetric(v)}>{t}</button>)}</div></div><div className="control"><label>인버터 표시</label><div className="segments inverterSeg">{[['total','합계'],['inv1','1'],['inv2','2'],['both','1+2']].map(([v,t])=><button key={v} className={inverterMode===v?'active':''} onClick={()=>setInverterMode(v)}>{t}</button>)}</div></div><div className="control"><label>동기간 비교</label><div className="segments compareSeg">{[1,2,3].map(n=><button key={n} className={compare.includes(n)?'active':''} onClick={()=>toggleCompare(n)}>{n}년전</button>)}</div></div>{(lineMetric==='efficiency'||lineMetric==='generationHours')&&<div className="control"><label>전국·지역 비교</label><div className="segments"><button className={showRegion?'active':''} onClick={()=>setShowRegion(v=>!v)}>{showRegion?'전국·지역 ON':'전국·지역 OFF'}</button></div></div>}<div className="control"><label>최고·최저 마커</label><div className="segments"><button className={showMaxPoint?'active':''} onClick={()=>setShowMaxPoint(v=>!v)}>최고점</button><button className={showMinPoint?'active':''} onClick={()=>setShowMinPoint(v=>!v)}>최저점</button></div></div><div className="control dates"><label>기간</label><div><input type="date" value={start} disabled={periodPreset!=='custom'} onChange={e=>setStart(e.target.value)}/><span>~</span><input type="date" value={end} disabled={periodPreset!=='custom'} onChange={e=>setEnd(e.target.value)}/></div></div></div></section>
+  <section className="controls card stickyControls"><div className="presetRow">{presetButtons.map(([k,t])=><button key={k} className={periodPreset===k?'preset active':'preset'} onClick={()=>applyPreset(k)}>{t}</button>)}</div><div className="controlRow"><div className="control"><label>집계</label><div className="segments">{[['hour','시간'],['day','일'],['month','월'],['season','계절'],['quarter','분기'],['year','년']].map(([v,t])=><button key={v} className={grain===v?'active':''} onClick={()=>setGrain(v)}>{t}</button>)}</div></div><div className="control"><label>막대 그래프</label><div className="segments metricSeg">{[['revenue','수익'],['kwh','발전량']].map(([v,t])=><button key={v} className={barMetric===v?'active':''} onClick={()=>setBarMetric(v)}>{t}</button>)}</div></div><div className="control"><label>라인 그래프</label><div className="segments metricSeg">{[['smp','SMP'],['efficiency','설비이용률'],['generationHours','발전시간']].map(([v,t])=><button key={v} className={lineMetric===v?'active':''} onClick={()=>setLineMetric(v)}>{t}</button>)}</div></div><div className="control"><label>인버터 표시</label><div className="segments inverterSeg">{[['total','합계'],['inv1','1'],['inv2','2'],['both','1+2']].map(([v,t])=><button key={v} className={inverterMode===v?'active':''} onClick={()=>setInverterMode(v)}>{t}</button>)}</div></div><div className="control"><label>동기간 비교</label><div className="segments compareSeg">{[1,2,3].map(n=><button key={n} className={compare.includes(n)?'active':''} onClick={()=>toggleCompare(n)}>{n}년전</button>)}</div></div>{(lineMetric==='efficiency'||lineMetric==='generationHours')&&<div className="control"><label>전국·지역 비교</label><div className="segments"><button className={showRegion?'active':''} onClick={()=>setShowRegion(v=>!v)}>{showRegion?'전국·지역 ON':'전국·지역 OFF'}</button></div></div>}<div className="control"><label>최고·최저 마커</label><div className="segments"><button className={showMaxPoint?'active':''} onClick={()=>setShowMaxPoint(v=>!v)}>최고점</button><button className={showMinPoint?'active':''} onClick={()=>setShowMinPoint(v=>!v)}>최저점</button></div></div><div className="control dates"><label>기간</label><div><input type="date" value={start} disabled={periodPreset!=='custom'} onChange={e=>setStart(e.target.value)}/><span>~</span><input type="date" value={end} disabled={periodPreset!=='custom'} onChange={e=>setEnd(e.target.value)}/></div></div></div></section>
 
   {error&&<div className="error">{error}</div>}
   {diag&&<section className="card diagPanel"><div><b>서비스계정:</b> {diag.clientEmail||'-'}</div><div><b>대상 폴더:</b> {diag.folder?.name||'(접근 실패)'}</div><div><b>발전 Excel:</b> {diag.generationExcelCount??0}개 · <b>SMP Excel:</b> {diag.smpExcelCount??0}개</div><div className={diag.generationExcelCount>0?'diagOk':'smpErr'}>{diag.note}</div></section>}
@@ -311,6 +361,9 @@ export default function Dashboard(){
       {recBarMetric==='amount'&&recPriceMode==='date'&&<div className="recControlGroup recDatePrice"><label>기준 일자</label><input type="date" value={recPriceDate} onChange={e=>setRecPriceDate(e.target.value)}/></div>}
       {recBarMetric==='amount'&&<div className="recPriceStatus"><b>{recPriceLoading?'가격 조회 중…':recValuationPrice==null?'기준 단가 없음':`${nf.format(recValuationPrice)} 원/REC`}</b><span>{recValuationDate?`가격 기준 거래일 ${String(recValuationDate).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3')}`:''}{recPriceMode==='date'&&recPriceLookup?.fromCache?' · Drive 일별 캐시 사용':''}</span>{recPriceLookup&&!recPriceLookup.ok&&<span className="smpErr">{recPriceLookup.message}</span>}</div>}
       <div className="recControlGroup recSupplyRatioControl"><label>REC 공급량 추정비율</label><div className="inputUnit compactInput"><input inputMode="decimal" value={recSupplyRatioPct} onChange={e=>saveRecSupplyRatio(e.target.value)} /><em>%</em></div><span className="controlHint">RPS 발급내역 Excel이 있으면 실제 공급전력량을 우선 사용합니다.</span></div>
+      <div className="recControlGroup recAxisControl"><label>REC 단가축</label><div className="segments"><button className={recPriceAxisMode==='auto'?'active':''} onClick={()=>saveRecAxisMode('auto')}>자동</button><button className={recPriceAxisMode==='manual'?'active':''} onClick={()=>saveRecAxisMode('manual')}>직접 설정</button></div><span className="controlHint">자동: 조회값 최저×0.9 / 최고×1.1 후 100원 단위로 여유를 둡니다.</span></div>
+      {recPriceAxisMode==='manual'&&<div className="recControlGroup recAxisFields"><label>축 최소 / 최대</label><div className="axisFieldRow"><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMin} onChange={e=>saveRecAxisValue('min',e.target.value)} placeholder={recAutoPriceAxis.min==null?'최소':String(recAutoPriceAxis.min)}/><em>원</em></div><span>~</span><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMax} onChange={e=>saveRecAxisValue('max',e.target.value)} placeholder={recAutoPriceAxis.max==null?'최대':String(recAutoPriceAxis.max)}/><em>원</em></div></div>{!recManualAxisValid&&<span className="controlHint axisWarn">최대값은 최소값보다 크게 입력하세요. 잘못된 경우 자동축을 사용합니다.</span>}</div>}
+      {recPriceAxisMode==='auto'&&recAutoPriceAxis.min!=null&&<div className="recPriceStatus recAxisStatus"><b>{nf.format(recAutoPriceAxis.min)} ~ {nf.format(recAutoPriceAxis.max)} 원/REC</b><span>조회 단가 {nf.format(Math.round(recAutoPriceAxis.dataMin))} ~ {nf.format(Math.round(recAutoPriceAxis.dataMax))}원 기준 자동축</span></div>}
     </div>
     <div className="recRule"><b>{data.rec.rule}</b><span><b>소수점 처리:</b> 소수점 넷째 자리 이하는 절사하고 셋째 자리까지 관리합니다. 전월 이월 REC + 당월 산정 REC 중 <b>정수 부분만 발급</b>하며 남은 소수부는 다음 달로 이월합니다.</span><span><b>중요:</b> REC는 발전보고서 전체 발전량이 아니라 RPS가 인정한 <b>공급전력량</b>을 기준으로 계산합니다.</span><span>{data.rec.priceRule}</span><span>{data.rec.assumption}</span><span>금액 보기에서는 <b>현재 REC 단가</b> 또는 사용자가 고른 <b>특정 일자의 최근 거래가격</b>을 모든 발급량에 동일 적용합니다.</span><span>REC 발급신청 기한: <b>전력공급일이 속한 달의 말일부터 90일 이내</b>.</span></div>
     {data.rec.marketHistory?.cache&&<div className="recCacheStatus"><b>REC API 호출 절약 캐시</b><span>Drive 누적 {nf.format(data.rec.marketHistory.cache.rows||0)}개월 · 이번 화면 캐시 재사용 {nf.format(data.rec.marketHistory.cache.hits||0)}개월 · 신규 API 호출 {nf.format(data.rec.marketHistory.cache.apiCalls||0)}회</span><span>월별 가격: {data.rec.marketHistory.cache.file||'REC_현물시장_월별캐시.xlsx'} · 특정일 가격은 REC_현물시장_일별캐시.xlsx에 누적됩니다.</span><span>수익화 거래내역: {data.rec.ledger?.file||'REC_수익화_수기입력.xlsx'} · 저장/수정하려면 서비스계정을 Drive 폴더에 편집자로 공유해야 합니다.</span>{data.rec.marketHistory.cache.saveError&&<span className="smpErr">Drive 저장 실패: {data.rec.marketHistory.cache.saveError}</span>}{data.rec.ledger?.error&&<span className="smpErr">수익화 파일 읽기 실패: {data.rec.ledger.error}</span>}</div>}
