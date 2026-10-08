@@ -80,3 +80,10 @@
 
 /* REC table newest-first pagination */
 .recTablePager{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px 2px;color:#64748b;font-size:12px}.recTablePager>div{display:flex;gap:7px}.recTablePager button{border:1px solid var(--line);background:#fff;color:#334155;border-radius:9px;padding:7px 10px;font-weight:800;cursor:pointer}.recTablePager button.primary{background:#111827;border-color:#111827;color:#fff}@media(max-width:600px){.recTablePager{align-items:flex-start;flex-direction:column}.recTablePager>div{width:100%}.recTablePager button{flex:1}}
+
+/* REC valuation toggle + manual monetization ledger */
+.recKpis6{grid-template-columns:repeat(6,minmax(0,1fr))}
+.recChartControls{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:12px 0;padding:10px 12px;border:1px solid var(--line);background:#fafbfc;border-radius:12px}
+.recControlGroup{min-width:0}.recControlGroup label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px}.recDatePrice input{border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 9px}.recPriceStatus{min-width:180px;display:flex;flex-direction:column;gap:2px;font-size:11px;color:#64748b}.recPriceStatus b{font-size:13px;color:#0f172a}.recLedgerTable{min-width:1680px}.ledgerInput{width:90px;max-width:100%;padding:7px 8px;border:1px solid #cbd5e1;border-radius:8px;text-align:right;background:#fff}.ledgerInput.amount{width:120px}.saveLedgerBtn{border:0;background:#111827;color:#fff;border-radius:8px;padding:7px 10px;font-weight:800;cursor:pointer}.saveLedgerBtn:disabled{opacity:.55}.saveOk,.saveErr{display:block;margin-top:4px;font-size:10px;white-space:normal}.saveOk{color:#047857}.saveErr{color:#b91c1c}.negative{color:#b91c1c;font-weight:800}
+@media(max-width:1100px){.recKpis6{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.recKpis6{grid-template-columns:repeat(2,minmax(0,1fr))}.recChartControls{align-items:stretch;padding:9px}.recControlGroup{width:100%}.recPriceStatus{width:100%}.recDatePrice input{width:100%}.recLedgerTable{min-width:1600px}}

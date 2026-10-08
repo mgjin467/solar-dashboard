@@ -1,67 +1,63 @@
-# 태양광 발전 · SMP · REC 대시보드
+# 태양광 SMP · REC 대시보드
 
-Google Drive 발전보고서/SMP Excel + 한국전력거래소 REC 현물시장 OpenAPI를 사용하는 Next.js/Vercel 대시보드입니다.
+Vercel + Google Drive 기반. 별도 DB를 사용하지 않습니다.
 
-## 환경변수
+## 원자료
+- 발전량: Google Drive의 `발전 보고서 - 년 ...xls`, `발전 보고서 - 월 ...xls`
+- SMP: Google Drive의 `smpDataRt_YYYY.xlsx`
+- REC 시세: 한국전력거래소 REC 현물시장 OpenAPI(15099762)
+- REC 월별/일별 API 조회 성공값: Google Drive `_REC_MARKET_CACHE` 폴더에 Excel로 누적
+- REC 수익화 수기입력: Google Drive `_REC_MARKET_CACHE/REC_수익화_수기입력.xlsx`
+- 지역/전국 평균: 한국에너지공단 REcloud 공개페이지를 새로고침 시 재확인
 
+## 주요 기능
+- 기간: 전체(2023-01-01~현재), 오늘, 전일, 금주, 전주, 당월, 전월, 분기, 반기, 당해, 전해, 직접선택
+- 1/2/3년 전 동기간 복수 비교
+- 메인 그래프: 막대=수익/발전량, 라인=SMP/설비이용률/발전시간
+- 전국·충북 평균 이용률 및 등가 발전시간 비교
+- REC 그래프: 막대=발급량/평가금액, 라인=월별 REC 평균가
+- REC 평가금액 단가: 현재 REC 단가 또는 사용자가 선택한 특정일(거래 없으면 직전 거래일)
+- API로 조회한 특정일 가격은 Drive `REC_현물시장_일별캐시.xlsx`에 저장하여 재호출 방지
+- 누적 예상 REC, 누적 수익화 REC, 남은 REC, 누적 수익화 금액 표시
+- 월별 수익화 REC/금액 수기 입력 및 Drive 저장/업데이트
+- REC 발급신청 마감 D-Day 및 만료 표시
+
+## Vercel 환경변수
 ```text
 GOOGLE_DRIVE_FOLDER_ID=...
-GOOGLE_SERVICE_ACCOUNT_JSON={...}
-REC_MARKET_SERVICE_KEY=공공데이터포털_일반인증키
+GOOGLE_SERVICE_ACCOUNT_JSON={...서비스계정 JSON 전체...}
+REC_MARKET_SERVICE_KEY=공공데이터포털 일반인증키
 ```
 
-로컬에서는 `GOOGLE_SERVICE_ACCOUNT_FILE=./service_account.json`도 사용할 수 있습니다.
+로컬에서는 `service_account.json`을 프로젝트 루트에 두고 `.env.local`에:
+```text
+GOOGLE_DRIVE_FOLDER_ID=...
+GOOGLE_SERVICE_ACCOUNT_FILE=./service_account.json
+REC_MARKET_SERVICE_KEY=...
+```
 
-## REC API
-
-공공데이터포털 **한국전력거래소_REC 현물시장 정보(15099762)** 를 사용합니다.
-
-- Endpoint: `https://apis.data.go.kr/B552115/RecMarketInfo2/getRecMarketInfo2`
-- 필수 파라미터: `serviceKey`, `pageNo`, `numOfRows`, `dataType=json`, `bzDd=YYYYMMDD`
-- Vercel에는 승인받은 키를 `REC_MARKET_SERVICE_KEY`로 등록한 뒤 Redeploy 합니다.
-- 대시보드는 선택기간이 12개월 이하일 때 각 월의 월말 기준 최근 화/목 장운영일을 역조회해 **그 달 마지막 확인 가능한 REC 현물시장 육지 평균가**를 라인그래프로 표시합니다.
-- 개발계정 일일 100건 제한을 고려해 REC 가격 자동조회는 최대 최근 12개월로 제한합니다.
-
-## REC 그래프
-
-- 막대: `예상 REC 발급량 = 발전량(MWh) × 가중치`
-- 라인: 해당 월 마지막 확인 가능한 거래일의 `육지 REC 평균가(원/REC)`
-- 표: 월별 발전량, 예상 REC, 가격 기준 거래일, 예상 REC 금액, 발급신청 마감일
+## Google Drive 권한
+REC 캐시와 수익화 수기입력 Excel을 자동 저장하므로 서비스계정 이메일을 대상 Drive 폴더에 **편집자**로 공유해야 합니다.
 
 ## 실행
-
 ```bash
 npm install
 npm run dev
 ```
+`http://localhost:3000`
 
-브라우저에서 `http://localhost:3000`으로 접속합니다.
+## 지역 평균 참고
+REcloud의 월별/지역별 공개표를 매 새로고침 때 확인합니다. 공급기관이 월별/지역별 최신 연도를 아직 공개하지 않은 경우에는 가장 최근 공개 연도 또는 코드 내 공식 공개 fallback을 사용하며, 화면에 기준연도를 표시합니다. 전국 최신 태양광 평균은 REcloud 메인 현황의 최신 분기값을 별도로 표시합니다.
 
+## 추가 기능: 분기 집계 / REC 집계 연동 / 최고·최저 마커
 
-## REC API 호출 절약 / Google Drive 누적 캐시
-
-REC 현물시장 API는 호출량 제한이 있으므로 조회 성공한 월별 가격은 Google Drive에 영구 저장합니다.
-
-- Drive 폴더: `_REC_MARKET_CACHE`
-- 파일: `REC_현물시장_월별캐시.xlsx`
-- 저장 컬럼: 월, 가격기준일, 육지평균가, 고가, 저가, 종가, 거래량, 거래건수, 캐시저장시각
-- 이미 저장된 **과거 월은 API를 다시 호출하지 않습니다.**
-- **현재 월만** 사용자가 `Drive 데이터 새로고침`을 눌렀을 때 최신 거래일 가격으로 다시 확인하고 같은 Excel을 갱신합니다.
-- 한 요청에서 최대 API 호출을 88회로 제한하여 개발계정 일일 100건 한도에 여유를 둡니다.
-- Drive에 캐시 파일을 생성/갱신하려면 서비스계정을 대상 Drive 폴더에 **편집자**로 공유해야 합니다. 읽기만 가능한 뷰어 권한이면 API 조회는 되지만 캐시 영구 저장은 실패합니다.
-
-
-## REC 발급 유효기간 표시
-- 발급신청 마감일과 함께 D-N / D+N 상태를 표시합니다.
-- 30일 이내는 마감 임박, 경과 시 기한 경과로 표시합니다.
-- REC 그래프 오른쪽 축 여백을 늘려 단가 축 제목/숫자가 잘리지 않도록 했습니다.
-
-## REC 그래프 축 제목 겹침 수정
-- 좌측축 제목은 `REC`, 우측축 제목은 `원/REC`로 짧게 표시합니다.
-- 축 제목은 세로축 중앙이 아니라 상단 끝에 가로로 배치하여 눈금 숫자와 겹치지 않습니다.
-
-## REC 표 표시 규칙
-- 발전월 기준 최신순(내림차순)으로 표시합니다.
-- 기본 10개 행만 표시하고 `10개 더보기`를 누를 때마다 최대 10개씩 추가합니다.
-- `접기`를 누르면 최신 10개 행으로 돌아갑니다.
-- REC 발급신청 기한이 지난 항목의 유효기간 상태는 `만료`로 표시합니다.
+- 상단 `집계`에 `분기`가 추가됩니다.
+- 메인 발전 그래프는 시간/일/월/분기/년 단위로 집계할 수 있습니다.
+- REC 그래프는 상단 집계 선택을 따라 다음처럼 자동 집계됩니다.
+  - `년` 선택 → REC 연간 집계
+  - `분기` 선택 → REC 분기 집계
+  - `시간/일/월` 선택 → REC 월간 집계
+- REC 발급량(또는 평가금액)은 기간 합계로 막대에 표시합니다.
+- REC 단가는 분기/년 집계 시 해당 기간에 존재하는 월별 REC 평균가의 산술평균을 라인으로 표시합니다.
+- `최고점`, `최저점` 버튼을 각각 켜고 끌 수 있으며 메인 그래프와 REC 그래프의 각 표시 계열에 마커가 추가됩니다.
+- 데이터가 없는 미래 구간의 0값은 최고/최저 마커 계산에서 제외합니다.
