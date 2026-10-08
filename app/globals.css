@@ -173,3 +173,78 @@ td{white-space:nowrap}
 .recLedgerTable.recMonthlyTable thead th{white-space:normal!important;word-break:keep-all;overflow-wrap:anywhere;line-height:1.35;text-align:center;vertical-align:middle;min-width:74px}.recLedgerTable.recMonthlyTable thead th:nth-child(3){min-width:116px}
 @media(max-width:900px){.equipmentDocGrid{grid-template-columns:1fr}.equipmentDocItem{grid-template-columns:auto minmax(0,1fr)}.equipmentDocActions{grid-column:1/-1;justify-content:flex-start;padding-left:54px}}
 @media(max-width:600px){.equipmentDocsCard{padding:12px}.equipmentDocItem{grid-template-columns:auto minmax(0,1fr);gap:9px;padding:10px}.equipmentDocIcon{width:36px;height:36px}.equipmentDocMeta b{font-size:12px}.equipmentDocActions{padding-left:45px}.equipmentDocActions button,.equipmentDocActions a{flex:1;text-align:center}.pdfModalBackdrop{padding:0}.pdfModalPanel{width:100vw;height:100dvh;max-width:none;max-height:none;border-radius:0}.pdfModalHeader{align-items:flex-start;flex-direction:column;gap:8px}.pdfModalActions{width:100%}.pdfModalActions button,.pdfModalActions a{flex:1;text-align:center}.pdfModalFooter{align-items:flex-start;flex-direction:column}.recLedgerTable.recMonthlyTable thead th{font-size:10px;padding:8px 6px;line-height:1.3}}
+
+/* REC lifecycle / expiry management */
+.recLifecycleBox{margin:16px 0;border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px;min-width:0}
+.recLifecycleHead{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:12px}.recLifecycleHead>div:first-child{display:flex;flex-direction:column;gap:4px}.recLifecycleHead b{font-size:15px}.recLifecycleHead span{font-size:11px;color:#64748b;line-height:1.5}.recLifecycleAsOf{white-space:nowrap;border:1px solid var(--line);background:#f8fafc;border-radius:9px;padding:7px 9px;font-size:11px;color:#64748b}.recLifecycleAsOf b{font-size:11px;color:#0f172a}
+.recLifecycleKpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}.recLifecycleKpis>div{border:1px solid var(--line);border-radius:11px;background:#fafbfc;padding:11px;min-width:0}.recLifecycleKpis span{display:block;font-size:10px;font-weight:800;color:#64748b;margin-bottom:5px}.recLifecycleKpis strong{display:block;font-size:18px;color:#0f172a;overflow-wrap:anywhere}.recLifecycleKpis small{display:block;margin-top:3px;font-size:9px;color:#94a3b8}.recLifecycleKpis>div.warn{background:#fff7ed;border-color:#fed7aa}.recLifecycleKpis>div.warn strong{color:#c2410c}.recLifecycleKpis>div.danger{background:#fef2f2;border-color:#fecaca}.recLifecycleKpis>div.danger strong{color:#b91c1c}.recLifecycleKpis>div.unknown{background:#f8fafc;border-style:dashed}
+.recLifecycleWarn{margin:0 0 12px;padding:9px 11px;border-radius:9px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:11px;line-height:1.5}
+.recIssueDateManager{border:1px solid var(--line);background:#f8fafc;border-radius:12px;padding:12px;margin-bottom:12px}.recIssueDateTitle{display:flex;flex-direction:column;gap:3px;margin-bottom:10px}.recIssueDateTitle b{font-size:13px}.recIssueDateTitle span{font-size:10px;color:#64748b;line-height:1.45}.recIssueDateForm{display:grid;grid-template-columns:190px 170px minmax(240px,1fr) auto;gap:9px;align-items:end}.recIssueDateForm label{display:flex;flex-direction:column;gap:5px;min-width:0}.recIssueDateForm label>span{font-size:10px;font-weight:800;color:#64748b}.recIssueDateForm input,.recIssueDateForm select{width:100%;min-width:0;border:1px solid #cbd5e1;border-radius:9px;background:#fff;padding:9px 10px}.recIssueDateForm .saveLedgerBtn{height:38px}
+.recExpiryTable{min-width:1250px}.recExpiryTable th,.recExpiryTable td{font-size:11px;text-align:right;vertical-align:middle}.recExpiryTable th:first-child,.recExpiryTable td:first-child{text-align:left}.recExpiryTable th{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.3}.expiryBadge,.txnTypeBadge{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:800;white-space:nowrap;border:1px solid #cbd5e1;background:#f8fafc;color:#334155}.expiryBadge.safe{background:#ecfdf5;border-color:#a7f3d0;color:#047857}.expiryBadge.soon{background:#fff7ed;border-color:#fed7aa;color:#c2410c}.expiryBadge.expired{background:#fef2f2;border-color:#fecaca;color:#b91c1c}.expiryBadge.unknown{background:#f8fafc;border-style:dashed;color:#64748b}.expiryBadge.used{background:#f1f5f9;color:#475569}.txnTypeBadge.monetized{background:#eff6ff;border-color:#bfdbfe;color:#1d4ed8}.txnTypeBadge.disposed{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.recTxnType{display:flex;align-items:center;gap:10px;margin-bottom:10px}.recTxnType>span{font-size:11px;font-weight:800;color:#64748b}.recTxnType .segments{width:auto}.recTxnType .segments button{min-width:72px}.recTxnForm input:disabled{background:#f1f5f9;color:#94a3b8}.recMonetizationSummary{max-width:100%}
+.recLedgerTable.recMonthlyTable th{white-space:normal;word-break:keep-all;overflow-wrap:anywhere;line-height:1.3;vertical-align:middle;text-align:center}
+.recLedgerTable.recMonthlyTable{min-width:2600px}
+@media(max-width:1100px){.recLifecycleKpis{grid-template-columns:repeat(2,minmax(0,1fr))}.recIssueDateForm{grid-template-columns:1fr 1fr}.recIssueNote{grid-column:1/-1}.recIssueDateForm .saveLedgerBtn{grid-column:1/-1}}
+@media(max-width:600px){.recLifecycleBox{padding:10px}.recLifecycleHead{flex-direction:column}.recLifecycleKpis{grid-template-columns:1fr 1fr;gap:7px}.recLifecycleKpis>div{padding:9px}.recLifecycleKpis strong{font-size:15px}.recIssueDateForm{grid-template-columns:1fr}.recIssueNote,.recIssueDateForm .saveLedgerBtn{grid-column:auto}.recExpiryTable{min-width:1050px}.recLedgerTable.recMonthlyTable{min-width:2350px}.recTxnType{align-items:flex-start;flex-direction:column}.recTxnType .segments{width:100%}.recTxnType .segments button{flex:1}}
+
+/* Mobile layout corrections: long line-metric buttons, capacity total, REC table headers */
+.capacityTotal{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap;flex:0 0 auto}
+.capacityTotal strong{display:inline-block;white-space:nowrap;margin-left:0!important;word-break:keep-all}
+
+.recLedgerTable.recMonthlyTable{table-layout:fixed}
+.recLedgerTable.recMonthlyTable thead th{
+  white-space:normal!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+  line-height:1.3;
+  text-align:center;
+  vertical-align:middle;
+  height:auto;
+}
+.recLedgerTable.recMonthlyTable thead th span{white-space:normal;line-height:1.3}
+.recLedgerTable.recMonthlyTable thead th:nth-child(1){width:92px}
+.recLedgerTable.recMonthlyTable thead th:nth-child(2){width:108px}
+.recLedgerTable.recMonthlyTable thead th:nth-child(3){width:132px}
+.recLedgerTable.recMonthlyTable thead th:nth-child(4),
+.recLedgerTable.recMonthlyTable thead th:nth-child(5),
+.recLedgerTable.recMonthlyTable thead th:nth-child(8){width:88px}
+.recLedgerTable.recMonthlyTable thead th:nth-child(6),
+.recLedgerTable.recMonthlyTable thead th:nth-child(7),
+.recLedgerTable.recMonthlyTable thead th:nth-child(9),
+.recLedgerTable.recMonthlyTable thead th:nth-child(10),
+.recLedgerTable.recMonthlyTable thead th:nth-child(11),
+.recLedgerTable.recMonthlyTable thead th:nth-child(12),
+.recLedgerTable.recMonthlyTable thead th:nth-child(13),
+.recLedgerTable.recMonthlyTable thead th:nth-child(14),
+.recLedgerTable.recMonthlyTable thead th:nth-child(15),
+.recLedgerTable.recMonthlyTable thead th:nth-child(16),
+.recLedgerTable.recMonthlyTable thead th:nth-child(17),
+.recLedgerTable.recMonthlyTable thead th:nth-child(18),
+.recLedgerTable.recMonthlyTable thead th:nth-child(19),
+.recLedgerTable.recMonthlyTable thead th:nth-child(20),
+.recLedgerTable.recMonthlyTable thead th:nth-child(21){width:104px}
+
+@media(max-width:600px){
+  .capacityTitle{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:start}
+  .capacityTotal{align-self:start;font-size:11px;padding-top:2px}
+  .capacityTotal strong{font-size:18px!important;line-height:1.1}
+
+  .lineMetricControl{grid-column:1/-1;min-width:0}
+  .lineMetricControl .metricSeg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;width:100%;gap:2px}
+  .lineMetricControl .metricSeg button{min-width:0!important;flex:none!important;padding:8px 4px!important;font-size:11px!important;line-height:1.15;white-space:normal!important;word-break:keep-all;text-align:center}
+
+  .recLedgerTable.recMonthlyTable thead th{font-size:9.5px!important;padding:8px 5px!important;line-height:1.25!important;white-space:normal!important;word-break:keep-all!important;overflow-wrap:normal!important}
+}
+
+
+/* Sticky section navigation + separate national/region bar comparison */
+.sectionNavBar{position:sticky!important;top:0!important;z-index:100!important;background:rgba(255,255,255,.97)!important;box-shadow:0 8px 22px rgba(15,23,42,.10)}
+.navTarget{scroll-margin-top:74px}
+.benchmarkCompareSeg button{min-width:62px}
+@media(max-width:600px){
+  .sectionNavBar{position:sticky!important;top:0!important;z-index:100!important;margin-left:0;margin-right:0}
+  .navTarget{scroll-margin-top:66px}
+  .benchmarkBarControl{grid-column:1/-1;min-width:0}
+  .benchmarkBarControl .benchmarkCompareSeg{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
+  .benchmarkBarControl .benchmarkCompareSeg button{min-width:0!important;white-space:normal!important;padding:8px 6px!important}
+}
