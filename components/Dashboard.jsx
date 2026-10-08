@@ -28,23 +28,57 @@ function formatExtremaValue(v,name=''){
   if(/REC 평균가|REC 단가/.test(name))return`${nf.format(Math.round(n))}원/REC`;
   return nf.format(n);
 }
+const EXTREMA_X_SYMBOL='path://M-8,-10 L10,8 L8,10 L-10,-8 Z M8,-10 L10,-8 L-8,10 L-10,8 Z';
 function applyExtremaMarkers(series,x,showMax,showMin){
   if(!showMax&&!showMin)return series;
   return series.map(s=>{
     const pts=(Array.isArray(s.data)?s.data:[]).map((item,i)=>{const raw=item&&typeof item==='object'&&'value'in item?item.value:item;return{i,v:Number(raw)}}).filter(p=>Number.isFinite(p.v)&&p.v!==0);
     if(!pts.length)return s;
     const marks=[];
-    if(showMax){const p=pts.reduce((a,b)=>b.v>a.v?b:a);marks.push({name:'최고',coord:[x[p.i],p.v],value:p.v,itemStyle:{color:'#dc2626'}})}
-    if(showMin){const p=pts.reduce((a,b)=>b.v<a.v?b:a);marks.push({name:'최저',coord:[x[p.i],p.v],value:p.v,itemStyle:{color:'#2563eb'}})}
-    return{...s,markPoint:{silent:true,symbol:'pin',symbolSize:54,label:{show:true,fontSize:9,fontWeight:800,color:'#fff',formatter:p=>`${p.name}\n${formatExtremaValue(p.value,s.name)}`},data:marks}};
+    if(showMax){const p=pts.reduce((a,b)=>b.v>a.v?b:a);marks.push({name:'최고점',coord:[x[p.i],p.v],value:p.v,period:x[p.i],seriesLabel:s.name,itemStyle:{color:'#dc2626'}})}
+    if(showMin){const p=pts.reduce((a,b)=>b.v<a.v?b:a);marks.push({name:'최저점',coord:[x[p.i],p.v],value:p.v,period:x[p.i],seriesLabel:s.name,itemStyle:{color:'#2563eb'}})}
+    return{...s,markPoint:{
+      silent:false,
+      symbol:EXTREMA_X_SYMBOL,
+      symbolSize:18,
+      label:{show:false},
+      tooltip:{
+        trigger:'item',
+        confine:true,
+        formatter:(p)=>{
+          const d=p?.data||{};
+          const title=d.name||p?.name||'';
+          const seriesName=d.seriesLabel||s.name||'';
+          const period=d.period||'';
+          const value=d.value??p?.value;
+          return `<b>${title}</b><br/>${seriesName}${period?`<br/>구간: ${period}`:''}<br/>값: ${formatExtremaValue(value,seriesName)}`;
+        }
+      },
+      data:marks
+    }};
   });
 }
 function recChartGrain(grain){return grain==='year'?'year':grain==='quarter'?'quarter':'month'}
 function recPeriodKey(month,mode){const m=String(month||'').match(/^(\d{4})-(\d{2})$/);if(!m)return String(month||'');const y=Number(m[1]),mo=Number(m[2]);if(mode==='year')return String(y);if(mode==='quarter')return`${y} Q${Math.floor((mo-1)/3)+1}`;return`${y}-${String(mo).padStart(2,'0')}`}
 function aggregateRecChartRows(rows,mode){
   const groups=new Map();
-  for(const r of(Array.isArray(rows)?rows:[])){const key=recPeriodKey(r?.month,mode);if(!groups.has(key))groups.set(key,{period:key,estimatedRec:0,kwh:0,priceSum:0,priceCount:0,priceDate:null,months:[]});const g=groups.get(key);g.estimatedRec+=Number(r?.estimatedRec||0);g.kwh+=Number(r?.kwh||0);g.months.push(r?.month||'');if(r?.price!=null&&Number.isFinite(Number(r.price))){g.priceSum+=Number(r.price);g.priceCount++}if(r?.priceDate&&(!g.priceDate||String(r.priceDate)>String(g.priceDate)))g.priceDate=r.priceDate}
-  return[...groups.values()].map(g=>({period:g.period,estimatedRec:+g.estimatedRec.toFixed(3),kwh:+g.kwh.toFixed(1),price:g.priceCount?Math.round(g.priceSum/g.priceCount):null,priceDate:g.priceDate,sourcePeriod:g.period,months:g.months}));
+  for(const r of(Array.isArray(rows)?rows:[])){
+    const key=recPeriodKey(r?.month,mode);
+    if(!groups.has(key))groups.set(key,{period:key,estimatedRec:0,issuedRec:0,calcRec:0,kwh:0,supplyKwh:0,priceSum:0,priceCount:0,priceDate:null,months:[]});
+    const g=groups.get(key);g.estimatedRec+=Number(r?.issuedRec ?? r?.estimatedRec ?? 0);g.issuedRec+=Number(r?.issuedRec ?? r?.estimatedRec ?? 0);g.calcRec+=Number(r?.calcRec ?? r?.estimatedRec ?? 0);g.kwh+=Number(r?.kwh||0);g.supplyKwh+=Number(r?.supplyKwh||0);g.months.push(r?.month||'');
+    if(r?.price!=null&&Number.isFinite(Number(r.price))){g.priceSum+=Number(r.price);g.priceCount++}
+    if(r?.priceDate&&(!g.priceDate||String(r.priceDate)>String(g.priceDate)))g.priceDate=r.priceDate;
+  }
+  return[...groups.values()].map(g=>({period:g.period,estimatedRec:+g.estimatedRec.toFixed(3),issuedRec:+g.issuedRec.toFixed(3),calcRec:+g.calcRec.toFixed(3),kwh:+g.kwh.toFixed(1),supplyKwh:+g.supplyKwh.toFixed(1),price:g.priceCount?Math.round(g.priceSum/g.priceCount):null,priceDate:g.priceDate,sourcePeriod:g.period,months:g.months}));
+}
+function aggregateRecTableRows(rows,mode){
+  const groups=new Map();
+  for(const r of(Array.isArray(rows)?rows:[])){
+    const key=recPeriodKey(r?.month,mode);
+    if(!groups.has(key))groups.set(key,{period:key,kwh:0,supplyKwh:0,calcRec:0,issuedRec:0,estimatedRevenue:0,revenueKnown:false,priceSum:0,priceCount:0,priceDate:null,sources:new Set(),last:null});
+    const g=groups.get(key);g.kwh+=Number(r?.kwh||0);g.supplyKwh+=Number(r?.supplyKwh||0);g.calcRec+=Number(r?.calcRec ?? 0);g.issuedRec+=Number(r?.issuedRec ?? r?.estimatedRec ?? 0);if(r?.estimatedRevenue!=null){g.estimatedRevenue+=Number(r.estimatedRevenue);g.revenueKnown=true}if(r?.price!=null&&Number.isFinite(Number(r.price))){g.priceSum+=Number(r.price);g.priceCount++}if(r?.priceDate&&(!g.priceDate||String(r.priceDate)>String(g.priceDate)))g.priceDate=r.priceDate;if(r?.source)g.sources.add(r.source);if(!g.last||String(r.month)>String(g.last.month))g.last=r;
+  }
+  return[...groups.values()].map(g=>{const last=g.last||{};const ratio=g.kwh>0?g.supplyKwh/g.kwh:null;return{period:g.period,month:g.period,kwh:+g.kwh.toFixed(1),supplyKwh:+g.supplyKwh.toFixed(1),supplyRatio:ratio==null?null:+ratio.toFixed(4),weight:last.weight??1.5,calcRec:+g.calcRec.toFixed(3),issuedRec:+g.issuedRec.toFixed(3),estimatedRec:+g.issuedRec.toFixed(3),source:g.sources.size===1?[...g.sources][0]:g.sources.size>1?'혼합':'-',price:g.priceCount?Math.round(g.priceSum/g.priceCount):null,priceDate:g.priceDate,estimatedRevenue:g.revenueKnown?Math.round(g.estimatedRevenue):null,cumulativeRec:last.cumulativeRec??null,cumulativeMonetized:last.cumulativeMonetized??null,cumulativeMonetizedAmount:last.cumulativeMonetizedAmount??null,remainingRec:last.remainingRec??null,deadline:mode==='month'?last.deadline:null};});
 }
 
 export default function Dashboard(){
@@ -63,12 +97,15 @@ export default function Dashboard(){
   const [cap1,setCap1]=useState('99.5');
   const [cap2,setCap2]=useState('99.5');
   const [recVisible,setRecVisible]=useState(10);
+  const [recSupplyRatioPct,setRecSupplyRatioPct]=useState('50');
   const [recBarMetric,setRecBarMetric]=useState('issuance');
   const [recPriceMode,setRecPriceMode]=useState('current');
   const [recPriceDate,setRecPriceDate]=useState(localIso());
   const [recPriceLookup,setRecPriceLookup]=useState(null);
   const [recPriceLoading,setRecPriceLoading]=useState(false);
-  const [recEdits,setRecEdits]=useState({});
+  const [recTxnForm,setRecTxnForm]=useState({id:'',date:localIso(),qty:'',amount:'',note:''});
+  const [recTxnSaving,setRecTxnSaving]=useState(false);
+  const [recTxnMessage,setRecTxnMessage]=useState('');
   const [data,setData]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[diag,setDiag]=useState(null),[diagLoading,setDiagLoading]=useState(false);
   const chartRef=useRef(null);
 
@@ -80,11 +117,8 @@ export default function Dashboard(){
       if(b!==null)setCap2(b);else setCap2(process.env.NEXT_PUBLIC_INVERTER2_KW||'99.5');
     }catch{}
   },[]);
-  useEffect(()=>{setRecVisible(10)},[start,end,compare]);
-  useEffect(()=>{
-    const next={};for(const r of(data?.rec?.series||[]))next[r.month]={qty:String(r.monetizedQty||''),amount:String(r.monetizedAmount||''),saving:false,message:''};
-    setRecEdits(next);
-  },[data?.rec?.series]);
+  useEffect(()=>{try{const r=localStorage.getItem('solar_rec_supply_ratio_pct');if(r!==null)setRecSupplyRatioPct(r)}catch{}},[]);
+  useEffect(()=>{setRecVisible(10)},[start,end,compare,grain]);
   useEffect(()=>{
     if(recPriceMode!=='date'){setRecPriceLookup(null);return}
     let cancelled=false;setRecPriceLoading(true);
@@ -97,20 +131,31 @@ export default function Dashboard(){
     else{setCap2(cleaned);try{localStorage.setItem('solar_inv2_kw',cleaned)}catch{}}
   };
   const c1=Number(cap1)||0,c2=Number(cap2)||0,totalCap=c1+c2;
+  const recSupplyRatio=Math.max(0,(Number(recSupplyRatioPct)||0)/100);
+  const saveRecSupplyRatio=(v)=>{const c=v.replace(/[^0-9.]/g,'');setRecSupplyRatioPct(c);try{localStorage.setItem('solar_rec_supply_ratio_pct',c)}catch{}};
   const applyPreset=(k)=>{setPeriodPreset(k);if(k==='custom')return;const p=presets()[k];setStart(localIso(p[0]));setEnd(localIso(p[1]));};
   const load=useCallback(async(forceRefresh=false)=>{
     setLoading(true);setError('');
     try{
-      const q=new URLSearchParams({grain,start,end,compare:compare.join(','),cap1:String(c1),cap2:String(c2),ts:String(Date.now()),forceSmp:forceRefresh?'1':'0'});
+      const q=new URLSearchParams({grain,start,end,compare:compare.join(','),cap1:String(c1),cap2:String(c2),recSupplyRatio:String(recSupplyRatio),ts:String(Date.now()),forceSmp:forceRefresh?'1':'0'});
       const r=await fetch(`/api/dashboard?${q}`,{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'데이터 조회 실패');setData(j)
     }catch(e){setError(e.message||String(e))}finally{setLoading(false)}
-  },[grain,start,end,compare,c1,c2]);
+  },[grain,start,end,compare,c1,c2,recSupplyRatio]);
   useEffect(()=>{load(false)},[load]);
   const runDiagnostics=useCallback(async()=>{setDiagLoading(true);try{const r=await fetch(`/api/diagnostics?ts=${Date.now()}`,{cache:'no-store'});setDiag(await r.json())}catch(e){setDiag({error:e.message||String(e)})}finally{setDiagLoading(false)}},[]);
-  const saveRecManual=useCallback(async(month)=>{
-    const edit=recEdits[month]||{};setRecEdits(v=>({...v,[month]:{...edit,saving:true,message:''}}));
-    try{const r=await fetch('/api/rec-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({month,monetizedQty:Number(edit.qty)||0,monetizedAmount:Number(edit.amount)||0})});const j=await r.json();if(!r.ok)throw new Error(j.message||'저장 실패');setRecEdits(v=>({...v,[month]:{...v[month],saving:false,message:'저장됨'}}));await load(false)}catch(e){setRecEdits(v=>({...v,[month]:{...v[month],saving:false,message:e.message||String(e)}}))}
-  },[recEdits,load]);
+  const saveRecTransaction=useCallback(async()=>{
+    setRecTxnSaving(true);setRecTxnMessage('');
+    try{
+      const body={id:recTxnForm.id||'',date:recTxnForm.date,monetizedQty:Number(recTxnForm.qty)||0,monetizedAmount:Number(String(recTxnForm.amount||'').replace(/,/g,''))||0,note:recTxnForm.note||''};
+      const r=await fetch('/api/rec-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const j=await r.json();if(!r.ok)throw new Error(j.message||'저장 실패');
+      setRecTxnMessage(recTxnForm.id?'수정되었습니다.':'저장되었습니다.');
+      setRecTxnForm({id:'',date:localIso(),qty:'',amount:'',note:''});
+      await load(false);
+    }catch(e){setRecTxnMessage(e.message||String(e))}finally{setRecTxnSaving(false)}
+  },[recTxnForm,load]);
+  const editRecTransaction=useCallback((t)=>{setRecTxnForm({id:t.id||'',date:t.date||localIso(),qty:String(t.monetizedQty??''),amount:String(t.monetizedAmount??''),note:t.note||''});setRecTxnMessage('');},[]);
+  const cancelRecTransactionEdit=useCallback(()=>{setRecTxnForm({id:'',date:localIso(),qty:'',amount:'',note:''});setRecTxnMessage('');},[]);
 
   const option=useMemo(()=>{
     const base=Array.isArray(data?.series)?data.series:[];
@@ -206,9 +251,12 @@ export default function Dashboard(){
   const toggleCompare=n=>setCompare(v=>v.includes(n)?v.filter(x=>x!==n):[...v,n].sort());
   const selectedEfficiency=data?.kpi?.[inverterMode==='inv1'?'efficiency1':inverterMode==='inv2'?'efficiency2':'efficiency'];
   const selectedGeneration=data?.kpi?.[inverterMode==='inv1'?'totalGeneration1':inverterMode==='inv2'?'totalGeneration2':'totalGeneration'];
-  const recRowsSorted=useMemo(()=>[...(data?.rec?.series||[])].sort((a,b)=>String(b?.month||'').localeCompare(String(a?.month||''))),[data?.rec?.series]);
+  const recTableMode=recChartGrain(grain);
+  const recRowsSorted=useMemo(()=>aggregateRecTableRows(data?.rec?.series||[],recTableMode).sort((a,b)=>String(b?.period||'').localeCompare(String(a?.period||''))),[data?.rec?.series,recTableMode]);
   const recRowsVisible=recRowsSorted.slice(0,recVisible);
   const recRowsRemaining=Math.max(0,recRowsSorted.length-recVisible);
+  const recPeriodLabel=recTableMode==='year'?'발전연도':recTableMode==='quarter'?'발전분기':'발전월';
+  const recTransactions=useMemo(()=>[...(data?.rec?.ledger?.transactions||[])].sort((a,b)=>String(b?.date||'').localeCompare(String(a?.date||''))||String(b?.updatedAt||'').localeCompare(String(a?.updatedAt||''))),[data?.rec?.ledger?.transactions]);
   const recSelectedValuationAmount=recValuationPrice==null?null:Math.round(Number(data?.rec?.estimatedRec||0)*Number(recValuationPrice));
 
   return <main className="shell"><header className="hero"><div><div className="eyebrow">SOLAR POWER MONITORING</div><h1>태양광 발전 · SMP · REC</h1><p>인버터별 발전량·수익·설비이용률·등가 발전시간을 확인하고, 충북/건축물 평균과 REC 발급·시세까지 한 화면에서 관리합니다.</p></div><div className="heroButtons"><a className="diagBtn linkBtn" href="https://renewables.co.kr/calculator" target="_blank" rel="noreferrer">사업성 분석 ↗</a><button className="diagBtn" onClick={runDiagnostics} disabled={diagLoading}>{diagLoading?'진단 중…':'Drive 진단'}</button><button className="sync" onClick={()=>load(true)} disabled={loading}>{loading?'새로고침 중…':'↻ Drive 데이터 새로고침'}</button></div></header>
@@ -236,7 +284,7 @@ export default function Dashboard(){
   <section className="card formulaCard"><div className="sectionTitle"><div><h2>발전량 예측·효율 계산 참고식</h2><p>실측 대시보드 값과 예측식을 구분해 표시합니다.</p></div></div><div className="formulaGrid"><div><b>① 일조시간 기반</b><code>연간 발전량 = 설치용량 × 연간 일조시간 × 0.6</code><span>일조시간 대비 실제 등가발전시간을 약 60%로 보는 간이식</span></div><div><b>② 일사량 기반</b><code>일 발전량 = 일사량(kWh/㎡/일) × 모듈면적 × 모듈효율</code><span>연간값은 일 발전량 × 365</span></div><div><b>③ 신재생에너지 생산량 기반</b><code>연간 생산량 = 설치규모 × 단위 에너지생산량 × 보정계수</code><span>공공 설계·예측용 참고식</span></div></div></section>
 
   {data?.rec&&<section className="card recCard">
-    <div className="sectionTitle"><div><h2>REC 발급량 · REC 단가 · 수익화 관리</h2><p>발급량/평가금액을 선택해 보고, REC 그래프는 상단 집계가 년이면 연간, 분기면 분기, 그 외에는 월간으로 표시합니다. 수익화한 REC 수량·금액은 월별로 직접 저장할 수 있습니다.</p></div><a className="actionLink" href="https://rps.energy.or.kr/CST_O2/O2_02_02_010_cst.do" target="_blank" rel="noreferrer">REC 발급신청 ↗</a></div>
+    <div className="sectionTitle"><div><h2>REC 발급량 · REC 단가 · 수익화 관리</h2><p>REC 발급 예상량과 시세를 확인하고, 실제로 수익화한 내역은 월별 칸이 아니라 아래 <b>수익화 거래내역</b>에 일자별로 계속 누적 저장합니다.</p></div><a className="actionLink" href="https://rps.energy.or.kr/CST_O2/O2_02_02_010_cst.do" target="_blank" rel="noreferrer">REC 발급신청 ↗</a></div>
     <div className="recKpis recKpis6">
       <div><span>조회기간 예상 REC</span><strong>{two.format(data.rec.estimatedRec)} REC</strong></div>
       <div><span>전체 누적 예상 REC</span><strong>{two.format(data.rec.ledger?.cumulativeRec||0)} REC</strong></div>
@@ -250,12 +298,28 @@ export default function Dashboard(){
       {recBarMetric==='amount'&&<div className="recControlGroup"><label>금액 계산 단가</label><div className="segments"><button className={recPriceMode==='current'?'active':''} onClick={()=>setRecPriceMode('current')}>현재 REC 단가</button><button className={recPriceMode==='date'?'active':''} onClick={()=>setRecPriceMode('date')}>특정 일자</button></div></div>}
       {recBarMetric==='amount'&&recPriceMode==='date'&&<div className="recControlGroup recDatePrice"><label>기준 일자</label><input type="date" value={recPriceDate} onChange={e=>setRecPriceDate(e.target.value)}/></div>}
       {recBarMetric==='amount'&&<div className="recPriceStatus"><b>{recPriceLoading?'가격 조회 중…':recValuationPrice==null?'기준 단가 없음':`${nf.format(recValuationPrice)} 원/REC`}</b><span>{recValuationDate?`가격 기준 거래일 ${String(recValuationDate).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3')}`:''}{recPriceMode==='date'&&recPriceLookup?.fromCache?' · Drive 일별 캐시 사용':''}</span>{recPriceLookup&&!recPriceLookup.ok&&<span className="smpErr">{recPriceLookup.message}</span>}</div>}
+      <div className="recControlGroup recSupplyRatioControl"><label>REC 공급량 추정비율</label><div className="inputUnit compactInput"><input inputMode="decimal" value={recSupplyRatioPct} onChange={e=>saveRecSupplyRatio(e.target.value)} /><em>%</em></div><span className="controlHint">RPS 발급내역 Excel이 있으면 실제 공급전력량을 우선 사용합니다.</span></div>
     </div>
-    <div className="recRule"><b>{data.rec.rule}</b><span>{data.rec.priceRule}</span><span>{data.rec.assumption}</span><span>금액 보기에서는 <b>현재 REC 단가</b> 또는 사용자가 고른 <b>특정 일자의 최근 거래가격</b>을 모든 발급량에 동일 적용합니다.</span><span>REC 발급신청 기한: <b>전력공급일이 속한 달의 말일부터 90일 이내</b>.</span></div>
-    {data.rec.marketHistory?.cache&&<div className="recCacheStatus"><b>REC API 호출 절약 캐시</b><span>Drive 누적 {nf.format(data.rec.marketHistory.cache.rows||0)}개월 · 이번 화면 캐시 재사용 {nf.format(data.rec.marketHistory.cache.hits||0)}개월 · 신규 API 호출 {nf.format(data.rec.marketHistory.cache.apiCalls||0)}회</span><span>월별 가격: {data.rec.marketHistory.cache.file||'REC_현물시장_월별캐시.xlsx'} · 특정일 가격은 REC_현물시장_일별캐시.xlsx에 누적됩니다.</span><span>수익화 수기입력: {data.rec.ledger?.file||'REC_수익화_수기입력.xlsx'} · 저장하려면 서비스계정을 Drive 폴더에 편집자로 공유해야 합니다.</span>{data.rec.marketHistory.cache.saveError&&<span className="smpErr">Drive 저장 실패: {data.rec.marketHistory.cache.saveError}</span>}{data.rec.ledger?.error&&<span className="smpErr">수익화 파일 읽기 실패: {data.rec.ledger.error}</span>}</div>}
+    <div className="recRule"><b>{data.rec.rule}</b><span><b>중요:</b> REC는 발전보고서 전체 발전량이 아니라 RPS가 인정한 <b>공급전력량</b>을 기준으로 계산합니다.</span><span>{data.rec.priceRule}</span><span>{data.rec.assumption}</span><span>금액 보기에서는 <b>현재 REC 단가</b> 또는 사용자가 고른 <b>특정 일자의 최근 거래가격</b>을 모든 발급량에 동일 적용합니다.</span><span>REC 발급신청 기한: <b>전력공급일이 속한 달의 말일부터 90일 이내</b>.</span></div>
+    {data.rec.marketHistory?.cache&&<div className="recCacheStatus"><b>REC API 호출 절약 캐시</b><span>Drive 누적 {nf.format(data.rec.marketHistory.cache.rows||0)}개월 · 이번 화면 캐시 재사용 {nf.format(data.rec.marketHistory.cache.hits||0)}개월 · 신규 API 호출 {nf.format(data.rec.marketHistory.cache.apiCalls||0)}회</span><span>월별 가격: {data.rec.marketHistory.cache.file||'REC_현물시장_월별캐시.xlsx'} · 특정일 가격은 REC_현물시장_일별캐시.xlsx에 누적됩니다.</span><span>수익화 거래내역: {data.rec.ledger?.file||'REC_수익화_수기입력.xlsx'} · 저장/수정하려면 서비스계정을 Drive 폴더에 편집자로 공유해야 합니다.</span>{data.rec.marketHistory.cache.saveError&&<span className="smpErr">Drive 저장 실패: {data.rec.marketHistory.cache.saveError}</span>}{data.rec.ledger?.error&&<span className="smpErr">수익화 파일 읽기 실패: {data.rec.ledger.error}</span>}</div>}
+    <div className="recCacheStatus rpsSupplyStatus"><b>REC 공급전력량 기준</b><span>{data.rec.rpsIssuance?.hasActual?`Drive의 RPS 실적 Excel ${nf.format(data.rec.rpsIssuance.files?.length||0)}개를 읽어 실제 공급전력량/발급량을 우선 적용합니다.`:`RPS 실적 Excel이 없어 발전보고서 발전량의 ${nf.format(Math.round((data.rec.supplyRatio||0)*1000)/10)}%를 공급전력량으로 추정 중입니다.`}</span><span>조회기간 REC 기준 공급전력량: <b>{nf.format(Math.round((data.rec.selectedSupplyMwh||0)*1000))} kWh</b></span>{data.rec.rpsIssuance?.latestMonth&&<span>RPS 최신 실적월: {data.rec.rpsIssuance.latestMonth}</span>}</div>
     {data.rec.market&&!data.rec.market.ok&&<div className="apiWarn">REC 시세 자동조회: {data.rec.market.message} <a href="https://www.data.go.kr/data/15099762/openapi.do" target="_blank" rel="noreferrer">OpenAPI 확인 ↗</a></div>}
     <div className="recChartWrap"><ReactECharts key={`${recChartKey}-${recBarMetric}-${recPriceMode}-${recValuationPrice??'na'}`} option={recOption} notMerge={true} lazyUpdate={false} style={{height:'100%',width:'100%'}} opts={{renderer:'canvas'}}/></div>
-    <div className="tableScroll"><table className="recLedgerTable"><thead><tr><th>발전월</th><th>발전량(kWh)</th><th>가중치</th><th>예상 REC</th><th>누적 REC</th><th>REC 평균가</th><th>월 기준 예상금액</th><th>수익화 REC</th><th>수익화 금액</th><th>누적 수익화 REC</th><th>남은 REC</th><th>저장</th><th>발급신청 마감일</th><th>유효기간</th></tr></thead><tbody>{recRowsVisible.map(r=>{const edit=recEdits[r.month]||{};return <tr key={r.month}><td>{r.month}</td><td>{nf.format(r.kwh)}</td><td>{r.weight}</td><td>{two.format(r.estimatedRec)}</td><td>{r.cumulativeRec==null?'-':two.format(r.cumulativeRec)}</td><td>{r.price==null?'-':`${nf.format(r.price)} 원`}</td><td>{r.estimatedRevenue==null?'-':`${nf.format(r.estimatedRevenue)} 원`}</td><td><input className="ledgerInput" inputMode="decimal" value={edit.qty??''} onChange={e=>setRecEdits(v=>({...v,[r.month]:{...(v[r.month]||{}),qty:e.target.value}}))} placeholder="REC"/></td><td><input className="ledgerInput amount" inputMode="numeric" value={edit.amount??''} onChange={e=>setRecEdits(v=>({...v,[r.month]:{...(v[r.month]||{}),amount:e.target.value}}))} placeholder="원"/></td><td>{r.cumulativeMonetized==null?'-':two.format(r.cumulativeMonetized)}</td><td className={Number(r.remainingRec)<0?'negative':''}>{r.remainingRec==null?'-':two.format(r.remainingRec)}</td><td><button className="saveLedgerBtn" disabled={edit.saving} onClick={()=>saveRecManual(r.month)}>{edit.saving?'저장중':'저장'}</button>{edit.message&&<small className={edit.message==='저장됨'?'saveOk':'saveErr'}>{edit.message}</small>}</td><td>{r.deadline?.date||'-'}</td><td><span className={`deadlineBadge ${r.deadline?.statusCode||''}`}>{r.deadline?.status||'-'}</span></td></tr>})}</tbody></table></div>
+
+    <div className="recMonetizationBox">
+      <div className="recMonetizationHead"><div><b>REC 수익화 거래내역</b><span>실제 REC를 판매·정산한 날마다 한 건씩 입력합니다. 월별 발전표와는 별도로 누적 관리됩니다.</span></div><div className="recMonetizationSummary"><span>누적 수익화 <b>{two.format(data.rec.ledger?.cumulativeMonetized||0)} REC</b></span><span>누적 금액 <b>{nf.format(data.rec.ledger?.cumulativeMonetizedAmount||0)}원</b></span><span>남은 REC <b>{two.format(data.rec.ledger?.remainingRec||0)} REC</b></span></div></div>
+      <div className="recTxnForm">
+        <label><span>수익화 일자</span><input type="date" value={recTxnForm.date} onChange={e=>setRecTxnForm(v=>({...v,date:e.target.value}))}/></label>
+        <label><span>수익화 REC</span><div className="inputUnit"><input inputMode="decimal" value={recTxnForm.qty} onChange={e=>setRecTxnForm(v=>({...v,qty:e.target.value.replace(/[^0-9.]/g,'')}))} placeholder="예: 50"/><em>REC</em></div></label>
+        <label><span>수익화 금액</span><div className="inputUnit"><input inputMode="numeric" value={recTxnForm.amount} onChange={e=>setRecTxnForm(v=>({...v,amount:e.target.value.replace(/[^0-9]/g,'')}))} placeholder="예: 3500000"/><em>원</em></div></label>
+        <label className="recTxnNote"><span>비고</span><input value={recTxnForm.note} onChange={e=>setRecTxnForm(v=>({...v,note:e.target.value}))} placeholder="거래처·정산 메모 등"/></label>
+        <div className="recTxnActions"><button className="saveLedgerBtn" disabled={recTxnSaving} onClick={saveRecTransaction}>{recTxnSaving?'저장중':recTxnForm.id?'수정 저장':'내역 추가'}</button>{recTxnForm.id&&<button className="cancelLedgerBtn" onClick={cancelRecTransactionEdit}>수정 취소</button>}</div>
+      </div>
+      {recTxnMessage&&<div className={/저장|수정/.test(recTxnMessage)?'txnMessage saveOk':'txnMessage saveErr'}>{recTxnMessage}</div>}
+      <div className="tableScroll"><table className="recTxnTable"><thead><tr><th>수익화 일자</th><th>수익화 REC</th><th>수익화 금액</th><th>실현 단가</th><th>비고</th><th>수정시각</th><th>관리</th></tr></thead><tbody>{recTransactions.length?recTransactions.map(t=>{const unit=Number(t.monetizedQty)>0?Number(t.monetizedAmount||0)/Number(t.monetizedQty):null;return <tr key={t.id}><td>{t.date||'-'}</td><td>{two.format(t.monetizedQty||0)} REC</td><td>{nf.format(t.monetizedAmount||0)} 원</td><td>{unit==null?'-':`${nf.format(Math.round(unit))} 원/REC`}</td><td className="txnNoteCell">{t.note||'-'}</td><td>{fmtDateTime(t.updatedAt)}</td><td><button className="editLedgerBtn" onClick={()=>editRecTransaction(t)}>수정</button></td></tr>}):<tr><td colSpan="7" className="emptyTxn">저장된 수익화 내역이 없습니다.</td></tr>}</tbody></table></div>
+    </div>
+
+    <div className="tableScroll"><table className="recLedgerTable recMonthlyTable"><thead><tr><th>{recPeriodLabel}</th><th>발전량(kWh)</th><th>REC 기준 공급전력량(kWh)</th><th>공급비율</th><th>가중치</th><th>산정 REC</th><th>발급량</th><th>기준</th><th>REC 평균가</th><th>예상금액</th><th>누적 REC</th><th>누적 수익화 REC</th><th>누적 수익화 금액</th><th>남은 REC</th><th>발급신청 마감</th><th>유효기간</th></tr></thead><tbody>{recRowsVisible.map(r=><tr key={r.period}><td>{r.period}</td><td>{nf.format(r.kwh)}</td><td>{nf.format(r.supplyKwh)}</td><td>{r.supplyRatio==null?'-':`${one.format(r.supplyRatio*100)}%`}</td><td>{r.weight}</td><td>{two.format(r.calcRec)}</td><td><b>{two.format(r.issuedRec)}</b></td><td><span className={`recSourceBadge ${String(r.source).includes('RPS')?'actual':'estimated'}`}>{r.source}</span></td><td>{r.price==null?'-':`${nf.format(r.price)} 원`}</td><td>{r.estimatedRevenue==null?'-':`${nf.format(r.estimatedRevenue)} 원`}</td><td>{r.cumulativeRec==null?'-':two.format(r.cumulativeRec)}</td><td>{r.cumulativeMonetized==null?'-':two.format(r.cumulativeMonetized)}</td><td>{r.cumulativeMonetizedAmount==null?'-':`${nf.format(r.cumulativeMonetizedAmount)} 원`}</td><td className={Number(r.remainingRec)<0?'negative':''}>{r.remainingRec==null?'-':two.format(r.remainingRec)}</td><td>{recTableMode==='month'?(r.deadline?.date||'-'):'월별 개별'}</td><td>{recTableMode==='month'?<span className={`deadlineBadge ${r.deadline?.statusCode||''}`}>{r.deadline?.status||'-'}</span>:'월별 확인'}</td></tr>)}</tbody></table></div>
     <div className="recTablePager"><span>최신순 · {Math.min(recVisible,recRowsSorted.length)} / {recRowsSorted.length}개 표시</span><div>{recVisible>10&&<button type="button" onClick={()=>setRecVisible(10)}>접기</button>}{recRowsRemaining>0&&<button type="button" className="primary" onClick={()=>setRecVisible(v=>Math.min(v+10,recRowsSorted.length))}>10개 더보기 (남은 {recRowsRemaining}개)</button>}</div></div>
   </section>}
 
