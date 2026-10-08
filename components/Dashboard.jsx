@@ -8,12 +8,14 @@ const two=new Intl.NumberFormat('ko-KR',{minimumFractionDigits:2,maximumFraction
 function localIso(d=new Date()){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return`${y}-${m}-${day}`}
 function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
 function presets(){const now=new Date(),dow=(now.getDay()+6)%7,monday=addDays(now,-dow),prevMon=addDays(monday,-7),prevSun=addDays(monday,-1),y=now.getFullYear(),m=now.getMonth();const q=Math.floor(m/3)*3,h=m<6?0:6;return{
-  today:[now,now],yesterday:[addDays(now,-1),addDays(now,-1)],thisWeek:[monday,now],lastWeek:[prevMon,prevSun],thisMonth:[new Date(y,m,1),now],lastMonth:[new Date(y,m-1,1),new Date(y,m,0)],quarter:[new Date(y,q,1),now],half:[new Date(y,h,1),now],thisYear:[new Date(y,0,1),now],lastYear:[new Date(y-1,0,1),new Date(y-1,11,31)]
+  all:[new Date(2023,0,1),now],today:[now,now],yesterday:[addDays(now,-1),addDays(now,-1)],thisWeek:[monday,now],lastWeek:[prevMon,prevSun],thisMonth:[new Date(y,m,1),now],lastMonth:[new Date(y,m-1,1),new Date(y,m,0)],quarter:[new Date(y,q,1),now],half:[new Date(y,h,1),now],thisYear:[new Date(y,0,1),now],lastYear:[new Date(y-1,0,1),new Date(y-1,11,31)]
 }}
-const presetButtons=[['today','오늘'],['yesterday','전일'],['thisWeek','금주'],['lastWeek','전주'],['thisMonth','당월'],['lastMonth','전월'],['quarter','분기'],['half','반기'],['thisYear','당해'],['lastYear','전해'],['custom','직접선택']];
+const presetButtons=[['all','전체'],['today','오늘'],['yesterday','전일'],['thisWeek','금주'],['lastWeek','전주'],['thisMonth','당월'],['lastMonth','전월'],['quarter','분기'],['half','반기'],['thisYear','당해'],['lastYear','전해'],['custom','직접선택']];
 const barMetricLabels={revenue:'수익',kwh:'발전량'};
 const lineMetricLabels={smp:'SMP',efficiency:'설비이용률',generationHours:'발전시간'};
 const inverterLabels={total:'합계',inv1:'인버터1',inv2:'인버터2',both:'인버터1+2'};
+function fmtDate(v){if(!v)return'-';const s=String(v);const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[1]}.${m[2]}.${m[3]}`:s}
+function fmtDateTime(v){if(!v)return'-';try{return new Date(v).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}catch{return String(v)}}
 
 export default function Dashboard(){
   const [grain,setGrain]=useState('month');
@@ -107,16 +109,59 @@ export default function Dashboard(){
   const chartKey=useMemo(()=>`${grain}-${barMetric}-${lineMetric}-${inverterMode}-${start}-${end}-${compare.join('-')}-${c1}-${c2}-${data?.series?.length||0}`,[grain,barMetric,lineMetric,inverterMode,start,end,compare,c1,c2,data?.series?.length]);
   const recOption=useMemo(()=>{
     const rows=Array.isArray(data?.rec?.series)?data.rec.series:[];
+    const comps=Array.isArray(data?.rec?.comparisons)?data.rec.comparisons:[];
     const x=rows.map(r=>String(r.month||''));
     if(!x.length)return{animation:false,title:{text:'표시할 REC 데이터가 없습니다',left:'center',top:'middle',textStyle:{fontSize:14,fontWeight:500,color:'#6b7280'}},grid:{left:18,right:24,top:45,bottom:45,containLabel:true},xAxis:{type:'category',data:[]},yAxis:[{type:'value'}],series:[]};
-    return{animation:false,legend:{top:0,left:8,right:8},grid:{left:18,right:24,top:48,bottom:60,containLabel:true},tooltip:{trigger:'axis',confine:true,formatter:(items)=>{const arr=Array.isArray(items)?items:[];const idx=arr[0]?.dataIndex??0;const r=rows[idx]||{};const lines=[`<b>${r.month||''}</b>`];for(const it of arr){if(it.seriesName==='예상 REC 발급량')lines.push(`${it.marker} 예상 REC 발급량: ${two.format(Number(it.value||0))} REC`);else if(it.seriesName==='REC 평균가')lines.push(`${it.marker} REC 평균가: ${it.value==null?'-':`${nf.format(Number(it.value))} 원/REC`}`)}if(r.priceDate)lines.push(`가격 기준 거래일: ${r.priceDate}`);return lines.join('<br/>')}},xAxis:{type:'category',data:x,axisLabel:{hideOverlap:true,margin:10}},yAxis:[{type:'value',name:'REC 발급량',min:0,nameGap:14,axisLabel:{formatter:v=>Number(v).toFixed(0),margin:12}},{type:'value',name:'REC 단가(원/REC)',position:'right',min:0,nameGap:14,axisLabel:{formatter:v=>nf.format(v),margin:12}}],dataZoom:x.length>4?[{type:'inside',xAxisIndex:0,filterMode:'none'},{type:'slider',xAxisIndex:0,bottom:8,height:20,filterMode:'none',showDetail:false}]:[],series:[{name:'예상 REC 발급량',type:'bar',data:rows.map(r=>Number(r.estimatedRec||0)),yAxisIndex:0,barMaxWidth:42},{name:'REC 평균가',type:'line',data:rows.map(r=>r.price==null?null:Number(r.price)),yAxisIndex:1,smooth:true,showSymbol:false,connectNulls:false}]};
-  },[data?.rec?.series]);
-  const recChartKey=useMemo(()=>`rec-${start}-${end}-${data?.rec?.series?.length||0}-${data?.rec?.market?.date||''}`,[start,end,data?.rec?.series?.length,data?.rec?.market?.date]);
+    const series=[];
+    const addRecSeries=(sourceRows,label,isCompare=false)=>{
+      const aligned=x.map((_,i)=>sourceRows?.[i]||{});
+      series.push({
+        name:`${label} REC 발급량`,type:'bar',yAxisIndex:0,barMaxWidth:36,
+        itemStyle:isCompare?{opacity:.62}:undefined,
+        data:aligned.map(r=>({value:Number(r?.estimatedRec||0),sourceMonth:r?.month||'',priceDate:r?.priceDate||''}))
+      });
+      series.push({
+        name:`${label} REC 평균가`,type:'line',yAxisIndex:1,smooth:true,showSymbol:false,connectNulls:false,
+        lineStyle:isCompare?{type:'dashed',width:2}:{width:2.4},
+        data:aligned.map(r=>({value:r?.price==null?null:Number(r.price),sourceMonth:r?.month||'',priceDate:r?.priceDate||''}))
+      });
+    };
+    addRecSeries(rows,'현재',false);
+    for(const c of comps)addRecSeries(Array.isArray(c?.series)?c.series:[],c?.label||`${c?.offset||''}년 전`,true);
+    return{
+      animation:false,
+      legend:{type:'scroll',top:0,left:8,right:8},
+      grid:{left:24,right:92,top:52,bottom:60,containLabel:true},
+      tooltip:{trigger:'axis',confine:true,formatter:(items)=>{
+        const arr=Array.isArray(items)?items:[];
+        const idx=arr[0]?.dataIndex??0;
+        const lines=[`<b>${x[idx]||''} 동기간 비교</b>`];
+        for(const it of arr){
+          const raw=it?.data?.value??it?.value;
+          const sourceMonth=it?.data?.sourceMonth||'';
+          const priceDate=it?.data?.priceDate||'';
+          if(it.seriesName.includes('REC 발급량')) lines.push(`${it.marker} ${it.seriesName}: ${two.format(Number(raw||0))} REC${sourceMonth?` <span style="color:#94a3b8">(${sourceMonth})</span>`:''}`);
+          else if(it.seriesName.includes('REC 평균가')) lines.push(`${it.marker} ${it.seriesName}: ${raw==null?'-':`${nf.format(Number(raw))} 원/REC`}${sourceMonth?` <span style="color:#94a3b8">(${sourceMonth})</span>`:''}${priceDate?` · ${priceDate}`:''}`);
+        }
+        return lines.join('<br/>');
+      }},
+      xAxis:{type:'category',data:x,axisLabel:{hideOverlap:true,margin:10}},
+      yAxis:[
+        {type:'value',name:'REC 발급량',min:0,nameGap:14,axisLabel:{formatter:v=>Number(v).toFixed(0),margin:12}},
+        {type:'value',name:'REC 단가\n(원/REC)',position:'right',min:0,nameGap:34,nameLocation:'middle',axisLabel:{formatter:v=>nf.format(v),margin:14}}
+      ],
+      dataZoom:x.length>4?[{type:'inside',xAxisIndex:0,filterMode:'none'},{type:'slider',xAxisIndex:0,bottom:8,height:20,filterMode:'none',showDetail:false}]:[],
+      series
+    };
+  },[data?.rec?.series,data?.rec?.comparisons]);
+  const recChartKey=useMemo(()=>`rec-${start}-${end}-${compare.join('-')}-${data?.rec?.series?.length||0}-${data?.rec?.comparisons?.length||0}-${data?.rec?.market?.date||''}`,[start,end,compare,data?.rec?.series?.length,data?.rec?.comparisons?.length,data?.rec?.market?.date]);
   const toggleCompare=n=>setCompare(v=>v.includes(n)?v.filter(x=>x!==n):[...v,n].sort());
   const selectedEfficiency=data?.kpi?.[inverterMode==='inv1'?'efficiency1':inverterMode==='inv2'?'efficiency2':'efficiency'];
   const selectedGeneration=data?.kpi?.[inverterMode==='inv1'?'totalGeneration1':inverterMode==='inv2'?'totalGeneration2':'totalGeneration'];
 
   return <main className="shell"><header className="hero"><div><div className="eyebrow">SOLAR POWER MONITORING</div><h1>태양광 발전 · SMP · REC</h1><p>인버터별 발전량·수익·설비이용률·등가 발전시간을 확인하고, 충북/건축물 평균과 REC 발급·시세까지 한 화면에서 관리합니다.</p></div><div className="heroButtons"><a className="diagBtn linkBtn" href="https://renewables.co.kr/calculator" target="_blank" rel="noreferrer">사업성 분석 ↗</a><button className="diagBtn" onClick={runDiagnostics} disabled={diagLoading}>{diagLoading?'진단 중…':'Drive 진단'}</button><button className="sync" onClick={()=>load(true)} disabled={loading}>{loading?'새로고침 중…':'↻ Drive 데이터 새로고침'}</button></div></header>
+
+  {data&&<section className="card dataUpdateBar"><div className="updateTitle"><b>데이터 업데이트 현황</b><span>원자료 기준일과 Drive/캐시 수정시각</span></div><div className="updateGrid"><div><span>발전보고서</span><strong>{fmtDate(data.updateMeta?.generation?.dataDate)}</strong><small>Drive 수정 {fmtDateTime(data.updateMeta?.generation?.fileModifiedAt)}</small></div><div><span>SMP 데이터</span><strong>{fmtDate(data.updateMeta?.smp?.dataDate)}</strong><small>Drive 수정 {fmtDateTime(data.updateMeta?.smp?.fileModifiedAt)}</small></div><div><span>REC 시세</span><strong>{fmtDate(data.updateMeta?.rec?.dataDate)}</strong><small>캐시 수정 {fmtDateTime(data.updateMeta?.rec?.cacheUpdatedAt)}</small></div><div><span>지역 평균</span><strong>{data.updateMeta?.region?.period||'-'}</strong><small>확인 {fmtDateTime(data.updateMeta?.region?.checkedAt)}</small></div><div><span>대시보드</span><strong>{fmtDateTime(data.syncedAt)}</strong><small>마지막 새로고침</small></div></div></section>}
 
   <section className="card capacityCard"><div className="capacityTitle"><div><b>인버터 정격용량</b><span>설비이용률(CF)과 등가 발전시간 계산에 사용됩니다.</span></div><div className="capacityTotal">합계 <strong>{totalCap?`${one.format(totalCap)} kW`:'미설정'}</strong></div></div><div className="capacityInputs"><label>인버터 1 <input inputMode="decimal" value={cap1} onChange={e=>saveCapacity(1,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><label>인버터 2 <input inputMode="decimal" value={cap2} onChange={e=>saveCapacity(2,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><div className="formula">설비이용률 = 발전량 ÷ (정격용량 × 24시간 × 일수) × 100 · 등가 발전시간 = 발전량 ÷ 정격용량</div></div></section>
 
@@ -138,7 +183,7 @@ export default function Dashboard(){
 
   <section className="card formulaCard"><div className="sectionTitle"><div><h2>발전량 예측·효율 계산 참고식</h2><p>실측 대시보드 값과 예측식을 구분해 표시합니다.</p></div></div><div className="formulaGrid"><div><b>① 일조시간 기반</b><code>연간 발전량 = 설치용량 × 연간 일조시간 × 0.6</code><span>일조시간 대비 실제 등가발전시간을 약 60%로 보는 간이식</span></div><div><b>② 일사량 기반</b><code>일 발전량 = 일사량(kWh/㎡/일) × 모듈면적 × 모듈효율</code><span>연간값은 일 발전량 × 365</span></div><div><b>③ 신재생에너지 생산량 기반</b><code>연간 생산량 = 설치규모 × 단위 에너지생산량 × 보정계수</code><span>공공 설계·예측용 참고식</span></div></div></section>
 
-  {data?.rec&&<section className="card recCard"><div className="sectionTitle"><div><h2>REC 발급량 · REC 단가</h2><p>예상 발급량은 발전량 × 가중치, 단가는 공공데이터포털 REC 현물시장 API의 육지 평균가를 사용합니다.</p></div><a className="actionLink" href="https://rps.energy.or.kr/CST_O2/O2_02_02_010_cst.do" target="_blank" rel="noreferrer">REC 발급신청 ↗</a></div><div className="recKpis"><div><span>조회기간 발전량</span><strong>{two.format(data.rec.selectedMwh)} MWh</strong></div><div><span>예상 REC</span><strong>{two.format(data.rec.estimatedRec)} REC</strong></div><div><span>최근 REC 평균가</span><strong>{data.rec.market?.ok&&data.rec.market.avg!=null?`${nf.format(data.rec.market.avg)} 원/REC`:'API 미연결'}</strong></div><div><span>REC 예상금액</span><strong>{data.rec.estimatedRevenue!=null?`${nf.format(data.rec.estimatedRevenue)} 원`:'-'}</strong></div></div><div className="recRule"><b>{data.rec.rule}</b><span>{data.rec.priceRule}</span><span>{data.rec.assumption}</span><span>REC 발급신청 기한: <b>전력공급일이 속한 달의 말일부터 90일 이내</b>.</span></div>{data.rec.marketHistory?.cache&&<div className="recCacheStatus"><b>REC API 호출 절약 캐시</b><span>Drive 누적 {nf.format(data.rec.marketHistory.cache.rows||0)}개월 · 이번 화면 캐시 재사용 {nf.format(data.rec.marketHistory.cache.hits||0)}개월 · 신규 API 호출 {nf.format(data.rec.marketHistory.cache.apiCalls||0)}회</span><span>저장파일: {data.rec.marketHistory.cache.file||'REC_현물시장_월별캐시.xlsx'}{data.rec.marketHistory.cache.saved?' · Drive 저장 완료':''}</span>{data.rec.marketHistory.cache.saveError&&<span className="smpErr">Drive 저장 실패: {data.rec.marketHistory.cache.saveError}</span>}<span>과거월은 한 번 저장되면 다시 조회하지 않고, 현재월은 <b>Drive 데이터 새로고침</b>을 눌렀을 때만 최신 거래일로 갱신합니다.</span></div>}{data.rec.market&&!data.rec.market.ok&&<div className="apiWarn">REC 시세 자동조회: {data.rec.market.message} <a href="https://www.data.go.kr/data/15099762/openapi.do" target="_blank" rel="noreferrer">OpenAPI 확인 ↗</a></div>}<div className="recChartWrap"><ReactECharts key={recChartKey} option={recOption} notMerge={true} lazyUpdate={false} style={{height:'100%',width:'100%'}} opts={{renderer:'canvas'}}/></div><div className="tableScroll"><table><thead><tr><th>발전월</th><th>발전량(kWh)</th><th>가중치</th><th>예상 REC</th><th>REC 평균가</th><th>가격 기준 거래일</th><th>예상 REC 금액</th><th>발급신청 마감</th></tr></thead><tbody>{(data.rec.series||[]).map(r=><tr key={r.month}><td>{r.month}</td><td>{nf.format(r.kwh)}</td><td>{r.weight}</td><td>{two.format(r.estimatedRec)}</td><td>{r.price==null?'-':`${nf.format(r.price)} 원`}</td><td>{r.priceDate||'-'}</td><td>{r.estimatedRevenue==null?'-':`${nf.format(r.estimatedRevenue)} 원`}</td><td>{r.deadline?.date||'-'}</td></tr>)}</tbody></table></div></section>}
+  {data?.rec&&<section className="card recCard"><div className="sectionTitle"><div><h2>REC 발급량 · REC 단가</h2><p>예상 발급량은 발전량 × 가중치, 단가는 공공데이터포털 REC 현물시장 API의 육지 평균가를 사용합니다. 상단의 1·2·3년 전 동기간 비교 선택이 REC 그래프에도 동일하게 적용됩니다.</p></div><a className="actionLink" href="https://rps.energy.or.kr/CST_O2/O2_02_02_010_cst.do" target="_blank" rel="noreferrer">REC 발급신청 ↗</a></div><div className="recKpis"><div><span>조회기간 발전량</span><strong>{two.format(data.rec.selectedMwh)} MWh</strong></div><div><span>예상 REC</span><strong>{two.format(data.rec.estimatedRec)} REC</strong></div><div><span>최근 REC 평균가</span><strong>{data.rec.market?.ok&&data.rec.market.avg!=null?`${nf.format(data.rec.market.avg)} 원/REC`:'API 미연결'}</strong></div><div><span>REC 예상금액</span><strong>{data.rec.estimatedRevenue!=null?`${nf.format(data.rec.estimatedRevenue)} 원`:'-'}</strong></div></div><div className="recRule"><b>{data.rec.rule}</b><span>{data.rec.priceRule}</span><span>{data.rec.assumption}</span><span>REC 발급신청 기한: <b>전력공급일이 속한 달의 말일부터 90일 이내</b>.</span></div>{data.rec.marketHistory?.cache&&<div className="recCacheStatus"><b>REC API 호출 절약 캐시</b><span>Drive 누적 {nf.format(data.rec.marketHistory.cache.rows||0)}개월 · 이번 화면 캐시 재사용 {nf.format(data.rec.marketHistory.cache.hits||0)}개월 · 신규 API 호출 {nf.format(data.rec.marketHistory.cache.apiCalls||0)}회</span><span>저장파일: {data.rec.marketHistory.cache.file||'REC_현물시장_월별캐시.xlsx'}{data.rec.marketHistory.cache.saved?' · Drive 저장 완료':''}</span>{data.rec.marketHistory.cache.saveError&&<span className="smpErr">Drive 저장 실패: {data.rec.marketHistory.cache.saveError}</span>}<span>과거월은 한 번 저장되면 다시 조회하지 않고, 현재월은 <b>Drive 데이터 새로고침</b>을 눌렀을 때만 최신 거래일로 갱신합니다.</span></div>}{data.rec.market&&!data.rec.market.ok&&<div className="apiWarn">REC 시세 자동조회: {data.rec.market.message} <a href="https://www.data.go.kr/data/15099762/openapi.do" target="_blank" rel="noreferrer">OpenAPI 확인 ↗</a></div>}<div className="recChartWrap"><ReactECharts key={recChartKey} option={recOption} notMerge={true} lazyUpdate={false} style={{height:'100%',width:'100%'}} opts={{renderer:'canvas'}}/></div><div className="tableScroll"><table><thead><tr><th>발전월</th><th>발전량(kWh)</th><th>가중치</th><th>예상 REC</th><th>REC 평균가</th><th>가격 기준 거래일</th><th>예상 REC 금액</th><th>발급신청 마감일</th><th>유효기간 상태</th></tr></thead><tbody>{(data.rec.series||[]).map(r=><tr key={r.month}><td>{r.month}</td><td>{nf.format(r.kwh)}</td><td>{r.weight}</td><td>{two.format(r.estimatedRec)}</td><td>{r.price==null?'-':`${nf.format(r.price)} 원`}</td><td>{r.priceDate||'-'}</td><td>{r.estimatedRevenue==null?'-':`${nf.format(r.estimatedRevenue)} 원`}</td><td>{r.deadline?.date||'-'}</td><td><span className={`deadlineBadge ${r.deadline?.statusCode||''}`}>{r.deadline?.status||'-'}</span></td></tr>)}</tbody></table></div></section>}
 
   <section className="card linksCard"><div className="sectionTitle"><div><h2>자료 업데이트·업무 링크</h2><p>계속 갱신하는 원자료와 신청/분석 페이지를 한곳에 정리했습니다.</p></div></div><div className="tableScroll"><table className="linksTable"><thead><tr><th>자료</th><th>용도</th><th>갱신</th><th>바로가기</th></tr></thead><tbody>{(data?.links||[]).map((r,i)=><tr key={i}><td>{r.name}</td><td>{r.purpose}</td><td>{r.update}</td><td><a href={r.url} target="_blank" rel="noreferrer">열기 ↗</a></td></tr>)}</tbody></table></div></section>
 

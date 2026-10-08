@@ -58,3 +58,22 @@
   .linksTable th:nth-child(4),.linksTable td:nth-child(4){width:16%}
   .recCacheStatus{font-size:11px;padding:9px 10px}
 }
+
+/* REC chart/right-axis and deadline status */
+.recChartWrap{overflow:hidden;padding-right:6px;box-sizing:border-box}
+.deadlineBadge{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;border-radius:999px;padding:5px 9px;font-weight:800;font-size:12px;border:1px solid #cbd5e1;background:#f8fafc;color:#334155}
+.deadlineBadge.safe{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
+.deadlineBadge.soon{background:#fff7ed;border-color:#fed7aa;color:#c2410c}
+.deadlineBadge.today{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.deadlineBadge.expired{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+@media (max-width:640px){
+  .recChartWrap{min-width:0;width:100%;overflow:hidden}
+  .recCard .tableScroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .deadlineBadge{font-size:11px;padding:4px 7px}
+}
+
+
+/* Top data update status */
+.dataUpdateBar{padding:12px 14px;margin-bottom:14px}.updateTitle{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}.updateTitle b{font-size:13px}.updateTitle span{font-size:11px;color:var(--muted)}.updateGrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.updateGrid>div{min-width:0;border:1px solid var(--line);background:#fafbfc;border-radius:11px;padding:9px 10px;display:flex;flex-direction:column;gap:3px}.updateGrid span{font-size:10px;font-weight:800;color:var(--muted)}.updateGrid strong{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.updateGrid small{font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:900px){.updateGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.dataUpdateBar{padding:10px;margin-bottom:10px}.updateTitle{display:block}.updateTitle span{display:block;margin-top:2px}.updateGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.updateGrid>div{padding:8px}.updateGrid strong{font-size:13px}.updateGrid small{font-size:9px}.updateGrid>div:last-child{grid-column:1/-1}}
