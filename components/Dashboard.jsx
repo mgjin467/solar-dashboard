@@ -260,10 +260,14 @@ export default function Dashboard(){
     for(const c of(Array.isArray(data?.rec?.comparisons)?data.rec.comparisons:[]))collect(c?.series||[]);
     if(!all.length)return{min:null,max:null,dataMin:null,dataMax:null};
     const dataMin=Math.min(...all),dataMax=Math.max(...all);
-    let min=Math.floor((dataMin*0.9)/100)*100;
-    let max=Math.ceil((dataMax*1.1)/100)*100;
-    min=Math.max(0,min);
-    if(max<=min)max=min+100;
+    // 자동축: 실제 최저/최고 단가를 먼저 1,000원 단위로 절사한 뒤
+    // 최저축은 1,000원 더 낮게, 최고축은 1,000원 더 높게 잡는다.
+    // 예) 68,450 -> 68,000 -> 67,000 / 71,800 -> 71,000 -> 72,000
+    const minBase=Math.floor(dataMin/1000)*1000;
+    const maxBase=Math.floor(dataMax/1000)*1000;
+    let min=Math.max(0,minBase-1000);
+    let max=maxBase+1000;
+    if(max<=min)max=min+1000;
     return{min,max,dataMin,dataMax};
   },[data?.rec?.series,data?.rec?.comparisons,grain]);
   const recManualAxisValid=useMemo(()=>{
@@ -361,7 +365,7 @@ export default function Dashboard(){
       {recBarMetric==='amount'&&recPriceMode==='date'&&<div className="recControlGroup recDatePrice"><label>기준 일자</label><input type="date" value={recPriceDate} onChange={e=>setRecPriceDate(e.target.value)}/></div>}
       {recBarMetric==='amount'&&<div className="recPriceStatus"><b>{recPriceLoading?'가격 조회 중…':recValuationPrice==null?'기준 단가 없음':`${nf.format(recValuationPrice)} 원/REC`}</b><span>{recValuationDate?`가격 기준 거래일 ${String(recValuationDate).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3')}`:''}{recPriceMode==='date'&&recPriceLookup?.fromCache?' · Drive 일별 캐시 사용':''}</span>{recPriceLookup&&!recPriceLookup.ok&&<span className="smpErr">{recPriceLookup.message}</span>}</div>}
       <div className="recControlGroup recSupplyRatioControl"><label>REC 공급량 추정비율</label><div className="inputUnit compactInput"><input inputMode="decimal" value={recSupplyRatioPct} onChange={e=>saveRecSupplyRatio(e.target.value)} /><em>%</em></div><span className="controlHint">RPS 발급내역 Excel이 있으면 실제 공급전력량을 우선 사용합니다.</span></div>
-      <div className="recControlGroup recAxisControl"><label>REC 단가축</label><div className="segments"><button className={recPriceAxisMode==='auto'?'active':''} onClick={()=>saveRecAxisMode('auto')}>자동</button><button className={recPriceAxisMode==='manual'?'active':''} onClick={()=>saveRecAxisMode('manual')}>직접 설정</button></div><span className="controlHint">자동: 조회값 최저×0.9 / 최고×1.1 후 100원 단위로 여유를 둡니다.</span></div>
+      <div className="recControlGroup recAxisControl"><label>REC 단가축</label><div className="segments"><button className={recPriceAxisMode==='auto'?'active':''} onClick={()=>saveRecAxisMode('auto')}>자동</button><button className={recPriceAxisMode==='manual'?'active':''} onClick={()=>saveRecAxisMode('manual')}>직접 설정</button></div><span className="controlHint">자동: 조회 최저·최고 단가를 1,000원 단위 절사 후 각각 -1,000원 / +1,000원으로 축 범위를 잡습니다.</span></div>
       {recPriceAxisMode==='manual'&&<div className="recControlGroup recAxisFields"><label>축 최소 / 최대</label><div className="axisFieldRow"><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMin} onChange={e=>saveRecAxisValue('min',e.target.value)} placeholder={recAutoPriceAxis.min==null?'최소':String(recAutoPriceAxis.min)}/><em>원</em></div><span>~</span><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMax} onChange={e=>saveRecAxisValue('max',e.target.value)} placeholder={recAutoPriceAxis.max==null?'최대':String(recAutoPriceAxis.max)}/><em>원</em></div></div>{!recManualAxisValid&&<span className="controlHint axisWarn">최대값은 최소값보다 크게 입력하세요. 잘못된 경우 자동축을 사용합니다.</span>}</div>}
       {recPriceAxisMode==='auto'&&recAutoPriceAxis.min!=null&&<div className="recPriceStatus recAxisStatus"><b>{nf.format(recAutoPriceAxis.min)} ~ {nf.format(recAutoPriceAxis.max)} 원/REC</b><span>조회 단가 {nf.format(Math.round(recAutoPriceAxis.dataMin))} ~ {nf.format(Math.round(recAutoPriceAxis.dataMax))}원 기준 자동축</span></div>}
     </div>
