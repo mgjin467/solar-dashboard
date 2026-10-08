@@ -307,3 +307,23 @@ td{white-space:nowrap}
   .recIssueDateDetails>summary span{font-size:9px}
   .recIssuePreview{display:grid;grid-template-columns:1fr}
 }
+
+/* REC disposal / expiry detail popup */
+.recLifecycleKpiButton{appearance:none;width:100%;min-width:0;border:1px solid var(--line);border-radius:12px;background:#fafbfc;padding:12px;text-align:left;color:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:4px;font:inherit}
+.recLifecycleKpiButton:hover{border-color:#94a3b8;background:#f8fafc}
+.recLifecycleKpiButton:focus-visible{outline:3px solid rgba(37,99,235,.18);outline-offset:2px}
+.recLifecycleKpiButton span{display:block;font-size:11px;color:var(--muted);font-weight:700}
+.recLifecycleKpiButton strong{font-size:19px;color:#0f172a}
+.recLifecycleKpiButton small{font-size:10px;color:#64748b}
+.recLifecycleKpiButton.danger{background:#fff7f7;border-color:#fecaca}.recLifecycleKpiButton.danger strong{color:#dc2626}
+.recLifecycleKpiButton.warn{background:#fffaf0;border-color:#fed7aa}.recLifecycleKpiButton.warn strong{color:#c2410c}
+.recLifecycleModalBackdrop{position:fixed;inset:0;z-index:1200;background:rgba(15,23,42,.62);padding:22px;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.recLifecycleModalPanel{width:min(1040px,96vw);max-height:min(820px,92vh);background:#fff;border-radius:16px;box-shadow:0 24px 80px rgba(15,23,42,.35);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+.recLifecycleModalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.recLifecycleModalHeader>div{display:flex;flex-direction:column;gap:4px;min-width:0}.recLifecycleModalHeader b{font-size:16px}.recLifecycleModalHeader span{font-size:11px;color:#64748b;line-height:1.45}
+.recLifecycleModalHeader button{border:1px solid #cbd5e1;background:#111827;color:#fff;border-radius:9px;padding:8px 10px;font-weight:800;cursor:pointer;white-space:nowrap}
+.recLifecycleModalBody{padding:14px 16px 18px;overflow:auto;min-height:0}
+.recLifecycleModalTotals{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.recLifecycleModalTotals>div{min-width:180px;flex:1;border:1px solid var(--line);border-radius:11px;background:#f8fafc;padding:10px 12px}.recLifecycleModalTotals span{display:block;font-size:10px;color:#64748b;font-weight:800;margin-bottom:4px}.recLifecycleModalTotals b{font-size:18px;color:#0f172a}
+.recLifecycleListSection{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:12px}.recLifecycleListHead{padding:10px 12px;background:#fafbfc;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.recLifecycleListHead b{font-size:13px}.recLifecycleListHead span{font-size:10px;color:#64748b}
+.recLifecyclePopupTable{width:100%;min-width:620px}.recLifecyclePopupTable th{white-space:normal!important;word-break:keep-all;line-height:1.3;text-align:center}.recLifecyclePopupTable td{text-align:center}.recLifecyclePopupTable td:last-child{white-space:normal;text-align:left}.expirySoonDays{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;font-size:11px;font-weight:800}
+@media(max-width:600px){.recLifecycleModalBackdrop{padding:0}.recLifecycleModalPanel{width:100vw;max-width:none;max-height:none;height:100dvh;border-radius:0}.recLifecycleModalHeader{padding:12px}.recLifecycleModalBody{padding:10px}.recLifecycleModalTotals{display:grid;grid-template-columns:1fr 1fr}.recLifecycleModalTotals>div{min-width:0}.recLifecycleModalTotals>div:last-child:nth-child(odd){grid-column:1/-1}.recLifecyclePopupTable{min-width:560px}.recLifecycleKpiButton{padding:10px}.recLifecycleKpiButton strong{font-size:17px}}

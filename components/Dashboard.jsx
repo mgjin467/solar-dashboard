@@ -145,6 +145,7 @@ export default function Dashboard(){
   const [recIssueMessage,setRecIssueMessage]=useState('');
   const [docModal,setDocModal]=useState(null);
   const [docCopyMessage,setDocCopyMessage]=useState('');
+  const [lifecyclePopup,setLifecyclePopup]=useState(null);
   const [data,setData]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[diag,setDiag]=useState(null),[diagLoading,setDiagLoading]=useState(false);
   const chartRef=useRef(null);
 
@@ -175,13 +176,13 @@ export default function Dashboard(){
     return()=>{cancelled=true};
   },[recPriceMode,recPriceDate]);
   useEffect(()=>{
-    if(!docModal)return;
+    if(!docModal&&!lifecyclePopup)return;
     const prevOverflow=document.body.style.overflow;
     document.body.style.overflow='hidden';
-    const onKeyDown=e=>{if(e.key==='Escape')setDocModal(null)};
+    const onKeyDown=e=>{if(e.key==='Escape'){setDocModal(null);setLifecyclePopup(null)}};
     window.addEventListener('keydown',onKeyDown);
     return()=>{document.body.style.overflow=prevOverflow;window.removeEventListener('keydown',onKeyDown)};
-  },[docModal]);
+  },[docModal,lifecyclePopup]);
   const openEquipmentDoc=doc=>{setDocModal(doc);setDocCopyMessage('')};
   const copyEquipmentDocLink=async doc=>{
     const url=typeof window!=='undefined'?new URL(doc.path,window.location.origin).href:doc.path;
@@ -392,6 +393,11 @@ export default function Dashboard(){
   const recSelectedValuationAmount=recValuationPrice==null?null:Math.round(Number(data?.rec?.estimatedRec||0)*Number(recValuationPrice));
   const recIssueLots=data?.rec?.ledger?.issueDateLots||data?.rec?.ledger?.lots||[];
   const selectedRecIssueLot=recIssueLots.find(x=>x.month===recIssueForm.month)||null;
+  const lifecycleLots=data?.rec?.ledger?.lots||[];
+  const manualDisposedTransactions=recTransactions.filter(t=>t.type==='disposed'&&Number(t.qty??t.disposedQty??0)>0);
+  const autoExpiredLots=lifecycleLots.filter(l=>Number(l.autoExpiredAllocated||0)>0).sort((a,b)=>String(b.expiryDate||'').localeCompare(String(a.expiryDate||'')));
+  const expiringSoonLots=lifecycleLots.filter(l=>l?.status?.code==='soon'&&Number(l.remaining||0)>0).sort((a,b)=>String(a.expiryDate||'9999-12-31').localeCompare(String(b.expiryDate||'9999-12-31')));
+  const daysUntil=(iso)=>{if(!iso)return null;const a=Date.parse(`${localIso()}T00:00:00Z`),b=Date.parse(`${iso}T00:00:00Z`);return Number.isFinite(a)&&Number.isFinite(b)?Math.ceil((b-a)/86400000):null};
 
   return <main className="shell"><header className="hero"><div><div className="eyebrow">SOLAR POWER MONITORING</div><h1>태양광 발전 · SMP · REC</h1><p>인버터별 발전량·수익·설비이용률·등가 발전시간을 확인하고, 충북/건축물 평균과 REC 발급·시세까지 한 화면에서 관리합니다.</p></div><div className="heroButtons"><a className="diagBtn linkBtn" href="https://renewables.co.kr/calculator" target="_blank" rel="noreferrer">사업성 분석 ↗</a><button className="diagBtn" onClick={runDiagnostics} disabled={diagLoading}>{diagLoading?'진단 중…':'Drive 진단'}</button><button className="sync" onClick={()=>load(true)} disabled={loading}>{loading?'새로고침 중…':'↻ Drive 데이터 새로고침'}</button></div></header>
 
@@ -468,8 +474,8 @@ export default function Dashboard(){
         <div><span>총 발급 REC</span><strong>{two.format(data.rec.ledger?.cumulativeRec||0)} REC</strong></div>
         <div><span>총 잔여 REC</span><strong>{two.format(data.rec.ledger?.remainingRec||0)} REC</strong></div>
         <div><span>총 수익화 REC</span><strong>{two.format(data.rec.ledger?.cumulativeMonetized||0)} REC</strong><small>소유권이전完</small></div>
-        <div className={Number(data.rec.ledger?.totalDisposed||0)>0?'danger':''}><span>총 폐기된 REC</span><strong>{two.format(data.rec.ledger?.totalDisposed||0)} REC</strong><small>직접 폐기 + 유효기간 만료</small></div>
-        <div className={Number(data.rec.ledger?.expiringSoon||0)>0?'warn':''}><span>총 폐기예정 REC</span><strong>{two.format(data.rec.ledger?.expiringSoon||0)} REC</strong><small>유효기간 6개월 이내</small></div>
+        <button type="button" className={`recLifecycleKpiButton ${Number(data.rec.ledger?.totalDisposed||0)>0?'danger':''}`} onClick={()=>setLifecyclePopup('disposed')}><span>총 폐기된 REC</span><strong>{two.format(data.rec.ledger?.totalDisposed||0)} REC</strong><small>직접 폐기 + 유효기간 만료 · 목록 보기</small></button>
+        <button type="button" className={`recLifecycleKpiButton ${Number(data.rec.ledger?.expiringSoon||0)>0?'warn':''}`} onClick={()=>setLifecyclePopup('expiring')}><span>총 폐기예정 REC</span><strong>{two.format(data.rec.ledger?.expiringSoon||0)} REC</strong><small>유효기간 6개월 이내 · 목록 보기</small></button>
       </div>
       {(Number(data.rec.ledger?.unallocatedMonetized||0)>0||Number(data.rec.ledger?.unallocatedDisposed||0)>0)&&<div className="recLifecycleWarn">입력된 거래/폐기 수량이 대시보드에서 확인된 발급 REC보다 큽니다. 미배정 수량: 수익화 {two.format(data.rec.ledger?.unallocatedMonetized||0)} REC · 폐기 {two.format(data.rec.ledger?.unallocatedDisposed||0)} REC. 과거 발급실적을 추가 확인하세요.</div>}
       <details className="recIssueDateManager recIssueDateDetails">
@@ -508,6 +514,8 @@ export default function Dashboard(){
 
   <div id="status-section" className="navTarget"></div>{data?.smpMeta&&<section className="card smpStatus"><b>SMP 상태</b><div><b>계산 기준:</b> {data.smpMeta.pricingRule||'월평균 SMP'}</div><div>Drive 확인: {new Date(data.smpMeta.fetchedAt).toLocaleString('ko-KR')}</div>{(data.smpMeta.yearStatus||[]).map((s,i)=><div key={i}>{s.year}: {s.source} · {nf.format(s.rows||0)}건 {s.file?`· ${s.file}`:''}</div>)}{(data.smpMeta.errors||[]).map((e,i)=><div key={i} className="smpErr">{e}</div>)}</section>}
   {data?.errors?.length>0&&<section className="card warning"><b>읽지 못한 발전파일 {data.errors.length}개</b>{data.errors.map((e,i)=><div key={i}>{e.file}: {e.error}</div>)}</section>}
+
+  {lifecyclePopup&&<div className="recLifecycleModalBackdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setLifecyclePopup(null)}}><div className="recLifecycleModalPanel" role="dialog" aria-modal="true" aria-label={lifecyclePopup==='disposed'?'폐기된 REC 목록':'폐기예정 REC 목록'}><div className="recLifecycleModalHeader"><div><b>{lifecyclePopup==='disposed'?'폐기된 REC 상세':'폐기예정 REC 상세'}</b><span>{lifecyclePopup==='disposed'?'직접 폐기와 유효기간 만료 자동폐기를 구분해서 보여줍니다.':'유효기간이 6개월 이내 남은 보유 REC입니다.'}</span></div><button type="button" onClick={()=>setLifecyclePopup(null)}>닫기 ✕</button></div><div className="recLifecycleModalBody">{lifecyclePopup==='disposed'?<><div className="recLifecycleModalTotals"><div><span>직접 폐기</span><b>{two.format(data.rec.ledger?.manualDisposed||0)} REC</b></div><div><span>만료 자동폐기</span><b>{two.format(data.rec.ledger?.autoExpired||0)} REC</b></div><div><span>총 폐기</span><b>{two.format(data.rec.ledger?.totalDisposed||0)} REC</b></div></div><section className="recLifecycleListSection"><div className="recLifecycleListHead"><b>직접 폐기 처리 내역</b><span>사용자가 ‘폐기’로 저장한 거래내역</span></div><div className="tableScroll"><table className="recLifecyclePopupTable"><thead><tr><th>처리일자</th><th>폐기량</th><th>비고</th></tr></thead><tbody>{manualDisposedTransactions.length?manualDisposedTransactions.map(t=><tr key={t.id}><td>{t.date||'-'}</td><td><b>{two.format(Number(t.qty??t.disposedQty??0))} REC</b></td><td>{t.note||'-'}</td></tr>):<tr><td colSpan="3" className="emptyTxn">직접 폐기 처리 내역이 없습니다.</td></tr>}</tbody></table></div></section><section className="recLifecycleListSection"><div className="recLifecycleListHead"><b>유효기간 만료 자동폐기</b><span>만료일까지 수익화·폐기되지 않아 자동 폐기된 잔량</span></div><div className="tableScroll"><table className="recLifecyclePopupTable"><thead><tr><th>발전월</th><th>적용 발급일</th><th>만료일</th><th>자동폐기량</th></tr></thead><tbody>{autoExpiredLots.length?autoExpiredLots.map(l=><tr key={l.id||l.month}><td>{l.month||'-'}</td><td>{l.issueDate||'-'}</td><td>{l.expiryDate||'-'}</td><td><b>{two.format(l.autoExpiredAllocated||0)} REC</b></td></tr>):<tr><td colSpan="4" className="emptyTxn">유효기간 만료 자동폐기 내역이 없습니다.</td></tr>}</tbody></table></div></section></>:<><div className="recLifecycleModalTotals"><div><span>6개월 이내 폐기예정</span><b>{two.format(data.rec.ledger?.expiringSoon||0)} REC</b></div><div><span>현재 총 잔여</span><b>{two.format(data.rec.ledger?.remainingRec||0)} REC</b></div></div><section className="recLifecycleListSection"><div className="recLifecycleListHead"><b>만료 임박 보유 REC</b><span>만료일이 가까운 순서</span></div><div className="tableScroll"><table className="recLifecyclePopupTable"><thead><tr><th>발전월</th><th>적용 발급일</th><th>만료일</th><th>남은 일수</th><th>현재 잔량</th></tr></thead><tbody>{expiringSoonLots.length?expiringSoonLots.map(l=>{const d=daysUntil(l.expiryDate);return <tr key={l.id||l.month}><td>{l.month||'-'}</td><td>{l.issueDate||'-'}</td><td>{l.expiryDate||'-'}</td><td><span className="expirySoonDays">{d==null?'-':d===0?'D-DAY':`D-${Math.max(0,d)}`}</span></td><td><b>{two.format(l.remaining||0)} REC</b></td></tr>}):<tr><td colSpan="5" className="emptyTxn">6개월 이내 만료 예정 REC가 없습니다.</td></tr>}</tbody></table></div></section></>}</div></div></div>}
 
   {docModal&&<div className="pdfModalBackdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setDocModal(null)}}><div className="pdfModalPanel" role="dialog" aria-modal="true" aria-label={docModal.title}><div className="pdfModalHeader"><div><b>{docModal.title}</b><span>{docModal.subtitle}</span></div><div className="pdfModalActions"><button type="button" onClick={()=>copyEquipmentDocLink(docModal)}>링크 복사</button><a href={docModal.path} target="_blank" rel="noreferrer">새 탭 ↗</a><button type="button" className="pdfCloseBtn" onClick={()=>setDocModal(null)}>닫기 ✕</button></div></div><div className="pdfModalBody"><iframe src={`${docModal.path}#view=FitH`} title={docModal.title}/></div><div className="pdfModalFooter"><span>모바일에서 PDF가 보이지 않으면 ‘새 탭’으로 열어주세요.</span>{docCopyMessage&&<b>{docCopyMessage}</b>}</div></div></div>}
   </main>
