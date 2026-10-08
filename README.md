@@ -1,69 +1,51 @@
 # 태양광 발전 · SMP · REC 대시보드
 
-Vercel + Google Drive 기반 대시보드입니다. 별도 DB는 사용하지 않습니다.
-
-## 데이터 흐름
-
-- 발전량: Google Drive의 `발전 보고서 - 년 ...xls`, `발전 보고서 - 월 ...xls`
-- SMP: Google Drive에 직접 올린 `smpInLand_YYYY.xlsx` / 연도 포함 SMP Excel
-- 지역 평균: 한국에너지공단 REcloud 공개 페이지를 서버에서 새로고침 시 조회
-- REC 시세: 공공데이터포털 `한국전력거래소_REC 현물시장 정보` OpenAPI(15099762), 환경변수 키 설정 시 자동 표시
-
-## 인버터 기본 용량
-
-- 인버터1: 99.5 kW
-- 인버터2: 99.5 kW
-- 합계: 199.0 kW
-
-화면에서 수정하면 브라우저에 저장됩니다.
-
-## 주요 계산식
-
-- 설비이용률(발전효율) = 발전량(kWh) / [설비용량(kW) × 기간시간(h)] × 100
-- 등가 발전시간 = 발전량(kWh) / 설비용량(kW)
-- 일평균 등가 발전시간 = 등가 발전시간 / 조회일수
-- SMP 수익 = 해당 월 발전량 × 해당 월 월평균 SMP
-- REC 예상량 = 발전량(MWh) × REC 가중치
-- 건축물 등 기존 시설물 이용 태양광 3,000kW 이하 기본 가중치 = 1.5 (실제 설비확인서 우선)
-
-## REC 발급기한
-
-전력공급일이 속한 달의 말일부터 90일 이내 신청해야 합니다. 기한 내 신청을 완료하지 않으면 기한일 익일 자동 말소됩니다.
+Google Drive 발전보고서/SMP Excel + 한국전력거래소 REC 현물시장 OpenAPI를 사용하는 Next.js/Vercel 대시보드입니다.
 
 ## 환경변수
 
-```env
-GOOGLE_DRIVE_FOLDER_ID=1MqVYFrY4j3yCRJD6hREnqoxNAeDS49p3
-GOOGLE_SERVICE_ACCOUNT_FILE=./service_account.json
-NEXT_PUBLIC_INVERTER1_KW=99.5
-NEXT_PUBLIC_INVERTER2_KW=99.5
-REC_MARKET_SERVICE_KEY=
+```text
+GOOGLE_DRIVE_FOLDER_ID=...
+GOOGLE_SERVICE_ACCOUNT_JSON={...}
+REC_MARKET_SERVICE_KEY=공공데이터포털_일반인증키
 ```
 
-Vercel에서는 `GOOGLE_SERVICE_ACCOUNT_FILE` 대신 `GOOGLE_SERVICE_ACCOUNT_JSON`에 서비스계정 JSON 전체를 넣으세요.
+로컬에서는 `GOOGLE_SERVICE_ACCOUNT_FILE=./service_account.json`도 사용할 수 있습니다.
 
-REC 시세 자동조회는 공공데이터포털의 아래 API를 활용신청한 뒤 일반 인증키를 `REC_MARKET_SERVICE_KEY`에 넣습니다.
+## REC API
 
-- https://www.data.go.kr/data/15099762/openapi.do
+공공데이터포털 **한국전력거래소_REC 현물시장 정보(15099762)** 를 사용합니다.
 
-## 지역 평균 자동 비교
+- Endpoint: `https://apis.data.go.kr/B552115/RecMarketInfo2/getRecMarketInfo2`
+- 필수 파라미터: `serviceKey`, `pageNo`, `numOfRows`, `dataType=json`, `bzDd=YYYYMMDD`
+- Vercel에는 승인받은 키를 `REC_MARKET_SERVICE_KEY`로 등록한 뒤 Redeploy 합니다.
+- 대시보드는 선택기간이 12개월 이하일 때 각 월의 월말 기준 최근 화/목 장운영일을 역조회해 **그 달 마지막 확인 가능한 REC 현물시장 육지 평균가**를 라인그래프로 표시합니다.
+- 개발계정 일일 100건 제한을 고려해 REC 가격 자동조회는 최대 최근 12개월로 제한합니다.
 
-새로고침 시 아래 공개 페이지를 다시 읽습니다.
+## REC 그래프
 
-- 충북 월별 이용률: https://recloud.energy.or.kr/rps/present/sub2_1_1.do?engy=1
-- 충북 최신 분기 이용률: https://recloud.energy.or.kr/rps/present/sub2_2_1.do?engy=1
-- 전국 최신 태양광 이용률: https://recloud.energy.or.kr/rps/main/main01.do
-- 건축물 태양광 월별 이용률: https://recloud.energy.or.kr/rps/present/sub2_3_1.do
+- 막대: `예상 REC 발급량 = 발전량(MWh) × 가중치`
+- 라인: 해당 월 마지막 확인 가능한 거래일의 `육지 REC 평균가(원/REC)`
+- 표: 월별 발전량, 예상 REC, 가격 기준 거래일, 예상 REC 금액, 발급신청 마감일
 
-사이트가 일시적으로 응답하지 않으면 내장된 최근 공개값을 fallback으로 사용합니다.
+## 실행
 
-## 설비이용률(CF) 계산 기준
+```bash
+npm install
+npm run dev
+```
 
-대시보드의 설비이용률은 다음 두 식이 동일하다는 기준으로 계산합니다.
+브라우저에서 `http://localhost:3000`으로 접속합니다.
 
-- 등가 발전시간(h) = 발전량(kWh) / 설비용량(kW)
-- 설비이용률(%) = 발전량(kWh) / [설비용량(kW) × 기간시간(h)] × 100
-- 따라서 설비이용률(%) = 등가 발전시간(h) / 기간시간(h) × 100
-- 하루 기준: 설비이용률(%) = 등가 발전시간 / 24 × 100
 
-`인버터 변환효율(AC/DC)`과 `모듈 변환효율`은 설비이용률과 다른 지표입니다.
+## REC API 호출 절약 / Google Drive 누적 캐시
+
+REC 현물시장 API는 호출량 제한이 있으므로 조회 성공한 월별 가격은 Google Drive에 영구 저장합니다.
+
+- Drive 폴더: `_REC_MARKET_CACHE`
+- 파일: `REC_현물시장_월별캐시.xlsx`
+- 저장 컬럼: 월, 가격기준일, 육지평균가, 고가, 저가, 종가, 거래량, 거래건수, 캐시저장시각
+- 이미 저장된 **과거 월은 API를 다시 호출하지 않습니다.**
+- **현재 월만** 사용자가 `Drive 데이터 새로고침`을 눌렀을 때 최신 거래일 가격으로 다시 확인하고 같은 Excel을 갱신합니다.
+- 한 요청에서 최대 API 호출을 88회로 제한하여 개발계정 일일 100건 한도에 여유를 둡니다.
+- Drive에 캐시 파일을 생성/갱신하려면 서비스계정을 대상 Drive 폴더에 **편집자**로 공유해야 합니다. 읽기만 가능한 뷰어 권한이면 API 조회는 되지만 캐시 영구 저장은 실패합니다.

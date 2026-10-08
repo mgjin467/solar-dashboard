@@ -36,3 +36,25 @@
 /* Terminology / calculation guide */
 .terminologyCard{padding:16px 18px;margin-top:14px}.termGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.termGrid>div{min-width:0;border:1px solid var(--line);background:#fafbfc;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px}.termGrid b{font-size:13px}.termGrid span{font-size:12px;line-height:1.55;color:#475569}.termGrid code{display:block;white-space:normal;overflow-wrap:anywhere;background:#eef2f7;border-radius:8px;padding:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#0f172a}.termNote{margin-top:10px;padding:10px 12px;border:1px solid #bae6fd;background:#f0f9ff;border-radius:10px;color:#0c4a6e;font-size:12px;line-height:1.6}.terminologyCard .sectionTitle p{margin-top:4px}
 @media(max-width:700px){.termGrid{grid-template-columns:1fr}.terminologyCard{padding:12px}.termGrid>div{padding:10px}.termGrid span,.termGrid code,.termNote{font-size:11px}}
+.recChartWrap{height:420px;width:100%;min-width:0;margin:12px 0 14px;touch-action:pan-y}
+@media(max-width:600px){.recChartWrap{height:360px}.recCard .tableScroll{overflow-x:auto}.recCard table{min-width:900px}}
+
+
+/* Resource links table alignment */
+.linksTable{table-layout:fixed;width:100%}
+.linksTable th,.linksTable td{vertical-align:middle}
+.linksTable th:nth-child(1),.linksTable td:nth-child(1){text-align:left;width:18%}
+.linksTable th:nth-child(2),.linksTable td:nth-child(2){text-align:left;width:42%}
+.linksTable th:nth-child(3),.linksTable td:nth-child(3){text-align:center;width:24%}
+.linksTable th:nth-child(4),.linksTable td:nth-child(4){text-align:center;width:16%}
+.linksTable td:nth-child(2),.linksTable td:nth-child(3){white-space:normal;min-width:0}
+.recCacheStatus{margin-top:9px;padding:10px 12px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;color:#1e3a8a;font-size:12px;line-height:1.6;display:flex;flex-direction:column;gap:2px;overflow-wrap:anywhere}
+.recCacheStatus b{color:#172554}
+@media(max-width:600px){
+  .linksTable{min-width:700px;table-layout:fixed}
+  .linksTable th:nth-child(1),.linksTable td:nth-child(1){width:18%}
+  .linksTable th:nth-child(2),.linksTable td:nth-child(2){width:42%}
+  .linksTable th:nth-child(3),.linksTable td:nth-child(3){width:24%}
+  .linksTable th:nth-child(4),.linksTable td:nth-child(4){width:16%}
+  .recCacheStatus{font-size:11px;padding:9px 10px}
+}
