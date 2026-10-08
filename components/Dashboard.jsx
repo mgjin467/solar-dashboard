@@ -19,14 +19,19 @@ function presets(){const now=new Date(),dow=(now.getDay()+6)%7,monday=addDays(no
   quarter:[new Date(y,q,1),now],
   half:[new Date(y,h,1),now],
   thisYear:[new Date(y,0,1),now],
-  thisSeasonYear:[new Date(y-1,11,1),new Date(y,10,30)],
+  thisSeasonYear:[new Date(y,2,1),new Date(y+1,2,0)],
   lastYear:[new Date(y-1,0,1),new Date(y-1,11,31)],
-  lastSeasonYear:[new Date(y-2,11,1),new Date(y-1,10,30)]
+  lastSeasonYear:[new Date(y-1,2,1),new Date(y,2,0)]
 }}
 const presetButtons=[['today','오늘'],['yesterday','전일'],['thisWeek','금주'],['lastWeek','전주'],['thisMonth','당월'],['lastMonth','전월'],['quarter','분기'],['half','반기'],['thisYear','당해'],['thisSeasonYear','당해(계절)'],['lastYear','전해'],['lastSeasonYear','전해(계절)'],['all','전체'],['custom','직접선택']];
 const barMetricLabels={revenue:'수익',kwh:'발전량'};
-const lineMetricLabels={smp:'SMP',efficiency:'설비이용률',generationHours:'발전시간'};
+const lineMetricLabels={smp:'SMP',efficiency:'설비이용률',generationHours:'발전시간',avgDailyGenerationHours:'일평균 등가시간'};
 const inverterLabels={total:'합계',inv1:'인버터1',inv2:'인버터2',both:'인버터1+2'};
+const sectionNavItems=[['equipment-docs','설비 문서'],['overview','개요·설정'],['main-chart','발전 그래프'],['compare-summary','비교·계산'],['rec-section','REC'],['links-section','자료 링크'],['status-section','상태']];
+const equipmentDocs=[
+  {key:'application',title:'설비확인 신청서_JCPC.pdf',subtitle:'공급인증서 발급대상 설비확인 신청서',path:'/docs/equipment-confirmation-application-JCPC.pdf'},
+  {key:'confirmation',title:'설비확인서_JCPC.pdf',subtitle:'공급인증서 발급대상 설비 확인서',path:'/docs/equipment-confirmation-JCPC.pdf'}
+];
 function fmtDate(v){if(!v)return'-';const s=String(v);const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?`${m[1]}.${m[2]}.${m[3]}`:s}
 function fmtDateTime(v){if(!v)return'-';try{return new Date(v).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false})}catch{return String(v)}}
 function formatPeriodLabel(v,grain){
@@ -47,7 +52,8 @@ function formatExtremaValue(v,name=''){
   if(/발전량/.test(name))return`${one.format(n)}kWh`;
   if(/REC 발급량/.test(name))return`${two.format(n)} REC`;
   if(/이용률/.test(name))return`${two.format(n)}%`;
-  if(/발전시간/.test(name))return`${two.format(n)}h`;
+  if(/일평균/.test(name))return`${two.format(n)}h/일`;
+  if(/발전시간|등가시간/.test(name))return`${two.format(n)}h`;
   if(/SMP/.test(name))return`${two.format(n)}원/kWh`;
   if(/REC 평균가|REC 단가/.test(name))return`${nf.format(Math.round(n))}원/REC`;
   return nf.format(n);
@@ -133,6 +139,8 @@ export default function Dashboard(){
   const [recTxnForm,setRecTxnForm]=useState({id:'',date:localIso(),qty:'',amount:'',note:''});
   const [recTxnSaving,setRecTxnSaving]=useState(false);
   const [recTxnMessage,setRecTxnMessage]=useState('');
+  const [docModal,setDocModal]=useState(null);
+  const [docCopyMessage,setDocCopyMessage]=useState('');
   const [data,setData]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[diag,setDiag]=useState(null),[diagLoading,setDiagLoading]=useState(false);
   const chartRef=useRef(null);
 
@@ -162,6 +170,21 @@ export default function Dashboard(){
     fetch(`/api/rec-price?date=${encodeURIComponent(recPriceDate)}&ts=${Date.now()}`,{cache:'no-store'}).then(async r=>{const j=await r.json();if(!cancelled)setRecPriceLookup(j)}).catch(e=>{if(!cancelled)setRecPriceLookup({ok:false,message:e.message||String(e)})}).finally(()=>{if(!cancelled)setRecPriceLoading(false)});
     return()=>{cancelled=true};
   },[recPriceMode,recPriceDate]);
+  useEffect(()=>{
+    if(!docModal)return;
+    const prevOverflow=document.body.style.overflow;
+    document.body.style.overflow='hidden';
+    const onKeyDown=e=>{if(e.key==='Escape')setDocModal(null)};
+    window.addEventListener('keydown',onKeyDown);
+    return()=>{document.body.style.overflow=prevOverflow;window.removeEventListener('keydown',onKeyDown)};
+  },[docModal]);
+  const openEquipmentDoc=doc=>{setDocModal(doc);setDocCopyMessage('')};
+  const copyEquipmentDocLink=async doc=>{
+    const url=typeof window!=='undefined'?new URL(doc.path,window.location.origin).href:doc.path;
+    try{await navigator.clipboard.writeText(url);setDocCopyMessage(`${doc.title} 링크를 복사했습니다.`)}
+    catch{if(typeof window!=='undefined')window.prompt('아래 링크를 복사하세요.',url)}
+  };
+
   const saveCapacity=(which,value)=>{
     const cleaned=value.replace(/[^0-9.]/g,'');
     if(which===1){setCap1(cleaned);try{localStorage.setItem('solar_inv1_kw',cleaned)}catch{}}
@@ -200,7 +223,7 @@ export default function Dashboard(){
     if(x.length===0)return{animation:false,title:{text:loading?'데이터 불러오는 중…':'표시할 데이터가 없습니다',left:'center',top:'middle',textStyle:{fontSize:14,fontWeight:500,color:'#6b7280'}},grid:{left:70,right:70,top:35,bottom:45,containLabel:true},xAxis:{type:'category',data:[]},yAxis:[{type:'value'}],series:[]};
     const series=[];
     const barKey=mode=>barMetric==='kwh'?(mode==='inv1'?'inv1Kwh':mode==='inv2'?'inv2Kwh':'kwh'):(mode==='inv1'?'revenue1':mode==='inv2'?'revenue2':'revenue');
-    const lineKey=mode=>lineMetric==='efficiency'?(mode==='inv1'?'efficiency1':mode==='inv2'?'efficiency2':'efficiency'):(lineMetric==='generationHours'?(mode==='inv1'?'generationHours1':mode==='inv2'?'generationHours2':'generationHours'):'smp');
+    const lineKey=mode=>lineMetric==='efficiency'?(mode==='inv1'?'efficiency1':mode==='inv2'?'efficiency2':'efficiency'):(lineMetric==='generationHours'?(mode==='inv1'?'generationHours1':mode==='inv2'?'generationHours2':'generationHours'):(lineMetric==='avgDailyGenerationHours'?(mode==='inv1'?'avgDailyGenerationHours1':mode==='inv2'?'avgDailyGenerationHours2':'avgDailyGenerationHours'):'smp'));
     const addRows=(rows,labelPrefix,isCompare=false)=>{
       const lineStyle=isCompare?{type:'dashed'}:undefined;
       if(inverterMode==='both'){
@@ -226,13 +249,33 @@ export default function Dashboard(){
       const map=new Map(rows.map(r=>[String(r.alignedActual??r.actual??''),r]));
       addRows(base.map(b=>map.get(String(b?.actual??''))||{}),c.label,true);
     }
-    if(showRegion&&(lineMetric==='efficiency'||lineMetric==='generationHours')){
+    if(showRegion){
       if(lineMetric==='efficiency'){
         series.push({name:`${data?.benchmark?.region||'충북'} 평균 이용률`,type:'line',data:base.map(r=>r?.regionEfficiency==null?null:Number(r.regionEfficiency)),yAxisIndex:1,smooth:true,showSymbol:false,lineStyle:{type:'dashed',width:2.2}});
         series.push({name:'전국 평균 이용률',type:'line',data:base.map(r=>r?.nationalEfficiency==null?null:Number(r.nationalEfficiency)),yAxisIndex:1,smooth:true,showSymbol:false,lineStyle:{type:'dotted',width:2.2}});
-      }else{
+      }else if(lineMetric==='generationHours'){
         series.push({name:`${data?.benchmark?.region||'충북'} 평균 발전시간`,type:'line',data:base.map(r=>r?.regionGenerationHours==null?null:Number(r.regionGenerationHours)),yAxisIndex:1,smooth:true,showSymbol:false,lineStyle:{type:'dashed',width:2.2}});
         series.push({name:'전국 평균 발전시간',type:'line',data:base.map(r=>r?.nationalGenerationHours==null?null:Number(r.nationalGenerationHours)),yAxisIndex:1,smooth:true,showSymbol:false,lineStyle:{type:'dotted',width:2.2}});
+      }else if(lineMetric==='avgDailyGenerationHours'){
+        series.push({name:`${data?.benchmark?.region||'충북'} 평균 일평균 등가시간`,type:'line',data:base.map(r=>r?.regionAvgDailyGenerationHours==null?null:Number(r.regionAvgDailyGenerationHours)),yAxisIndex:1,smooth:true,showSymbol:false,lineStyle:{type:'dashed',width:2.2}});
+        series.push({name:'전국 평균 일평균 등가시간',type:'line',data:base.map(r=>r?.nationalAvgDailyGenerationHours==null?null:Number(r.nationalAvgDailyGenerationHours)),yAxisIndex:1,smooth:true,showSymbol:false,lineStyle:{type:'dotted',width:2.2}});
+      }
+      if(barMetric==='kwh'){
+        const addGenerationBenchmark=(label,field,cap,lineType)=>{
+          if(!(cap>0))return;
+          series.push({name:label,type:'line',data:base.map(r=>r?.[field]==null?null:+(Number(r[field])*cap).toFixed(1)),yAxisIndex:0,smooth:true,showSymbol:false,lineStyle:{type:lineType,width:2.0}});
+        };
+        const regionName=data?.benchmark?.region||'충북';
+        if(inverterMode==='both'){
+          addGenerationBenchmark(`${regionName} 평균 발전량 · 인버터1 환산`,'regionGenerationHours',c1,'dashed');
+          addGenerationBenchmark(`전국 평균 발전량 · 인버터1 환산`,'nationalGenerationHours',c1,'dotted');
+          addGenerationBenchmark(`${regionName} 평균 발전량 · 인버터2 환산`,'regionGenerationHours',c2,'dashed');
+          addGenerationBenchmark(`전국 평균 발전량 · 인버터2 환산`,'nationalGenerationHours',c2,'dotted');
+        }else{
+          const cap=inverterMode==='inv1'?c1:inverterMode==='inv2'?c2:totalCap;
+          addGenerationBenchmark(`${regionName} 평균 발전량 · 용량환산`,'regionGenerationHours',cap,'dashed');
+          addGenerationBenchmark(`전국 평균 발전량 · 용량환산`,'nationalGenerationHours',cap,'dotted');
+        }
       }
     }
     const zoom=x.length>2?[{type:'inside',xAxisIndex:0,filterMode:'none',zoomOnMouseWheel:true,moveOnMouseMove:true,moveOnMouseWheel:false,preventDefaultMouseMove:true},{type:'slider',xAxisIndex:0,bottom:10,height:22,filterMode:'none',showDetail:false}]:[];
@@ -240,14 +283,16 @@ export default function Dashboard(){
       ?{type:'value',name:'설비이용률(%)',position:'right',min:0,nameGap:14,axisLabel:{formatter:v=>`${v}%`,margin:12}}
       :lineMetric==='generationHours'
         ?{type:'value',name:'발전시간(h)',position:'right',min:0,nameGap:14,axisLabel:{formatter:v=>`${Number(v).toFixed(1)}h`,margin:12}}
-        :{type:'value',name:'SMP(원/kWh)',position:'right',nameGap:14,axisLabel:{formatter:v=>Number(v).toFixed(0),margin:12}};
+        :lineMetric==='avgDailyGenerationHours'
+          ?{type:'value',name:'일평균 등가시간(h/일)',position:'right',min:0,nameGap:14,axisLabel:{formatter:v=>`${Number(v).toFixed(1)}h`,margin:12}}
+          :{type:'value',name:'SMP(원/kWh)',position:'right',nameGap:14,axisLabel:{formatter:v=>Number(v).toFixed(0),margin:12}};
     const yAxis=[
       {type:'value',name:barMetric==='revenue'?'수익(원)':'발전량(kWh)',nameGap:14,axisLabel:{formatter:v=>nf.format(v),margin:12}},
       rightAxis
     ];
     const markedSeries=applyExtremaMarkers(series,x,showMaxPoint,showMinPoint);
     return{animation:false,legend:{type:'scroll',top:0,left:8,right:8},grid:{left:18,right:24,top:48,bottom:zoom.length?74:46,containLabel:true},tooltip:{trigger:'axis',confine:true},xAxis:{type:'category',data:x,boundaryGap:true,axisLabel:{hideOverlap:true,margin:10}},yAxis,dataZoom:zoom,series:markedSeries};
-  },[data,barMetric,lineMetric,inverterMode,showRegion,showMaxPoint,showMinPoint,loading]);
+  },[data,barMetric,lineMetric,inverterMode,showRegion,showMaxPoint,showMinPoint,loading,c1,c2,totalCap]);
   const chartKey=useMemo(()=>`${grain}-${barMetric}-${lineMetric}-${inverterMode}-${start}-${end}-${compare.join('-')}-${c1}-${c2}-${data?.series?.length||0}`,[grain,barMetric,lineMetric,inverterMode,start,end,compare,c1,c2,data?.series?.length]);
   const recCurrentPrice=data?.rec?.market?.ok?(data.rec.market.avg??data.rec.market.close??null):null;
   const recValuationPrice=recPriceMode==='date'?(recPriceLookup?.ok?(recPriceLookup.avg??recPriceLookup.close??null):null):recCurrentPrice;
@@ -316,6 +361,12 @@ export default function Dashboard(){
   const toggleCompare=n=>setCompare(v=>v.includes(n)?v.filter(x=>x!==n):[...v,n].sort());
   const selectedEfficiency=data?.kpi?.[inverterMode==='inv1'?'efficiency1':inverterMode==='inv2'?'efficiency2':'efficiency'];
   const selectedGeneration=data?.kpi?.[inverterMode==='inv1'?'totalGeneration1':inverterMode==='inv2'?'totalGeneration2':'totalGeneration'];
+  const selectedGenerationHours=data?.kpi?.[inverterMode==='inv1'?'generationHours1':inverterMode==='inv2'?'generationHours2':'generationHours'];
+  const selectedAvgDailyGenerationHours=data?.kpi?.[inverterMode==='inv1'?'avgDailyGenerationHours1':inverterMode==='inv2'?'avgDailyGenerationHours2':'avgDailyGenerationHours'];
+  const regionComparable=barMetric==='kwh'||['efficiency','generationHours','avgDailyGenerationHours'].includes(lineMetric);
+  const selectedCapacity=inverterMode==='inv1'?c1:inverterMode==='inv2'?c2:totalCap;
+  const regionAnnualExpectedKwh=(data?.benchmark?.annualAverage!=null&&selectedCapacity>0)?selectedCapacity*8760*Number(data.benchmark.annualAverage)/100:null;
+  const nationalAnnualExpectedKwh=(data?.benchmark?.nationalAnnualAverage!=null&&selectedCapacity>0)?selectedCapacity*8760*Number(data.benchmark.nationalAnnualAverage)/100:null;
   const recTableMode=recChartGrain(grain);
   const recRowsSorted=useMemo(()=>aggregateRecTableRows(data?.rec?.series||[],recTableMode).sort((a,b)=>String(b?.period||'').localeCompare(String(a?.period||''))),[data?.rec?.series,recTableMode]);
   const recRowsVisible=recRowsSorted.slice(0,recVisible);
@@ -328,27 +379,35 @@ export default function Dashboard(){
 
   {data&&<section className="card dataUpdateBar"><div className="updateTitle"><b>데이터 업데이트 현황</b><span>원자료 기준일과 Drive/캐시 수정시각</span></div><div className="updateGrid"><div><span>발전보고서</span><strong>{fmtDate(data.updateMeta?.generation?.dataDate)}</strong><small>Drive 수정 {fmtDateTime(data.updateMeta?.generation?.fileModifiedAt)}</small></div><div><span>SMP 데이터</span><strong>{fmtDate(data.updateMeta?.smp?.dataDate)}</strong><small>Drive 수정 {fmtDateTime(data.updateMeta?.smp?.fileModifiedAt)}</small></div><div><span>REC 시세</span><strong>{fmtDate(data.updateMeta?.rec?.dataDate)}</strong><small>캐시 수정 {fmtDateTime(data.updateMeta?.rec?.cacheUpdatedAt)}</small></div><div><span>지역 평균</span><strong>{data.updateMeta?.region?.period||'-'}</strong><small>확인 {fmtDateTime(data.updateMeta?.region?.checkedAt)}</small></div><div><span>대시보드</span><strong>{fmtDateTime(data.syncedAt)}</strong><small>마지막 새로고침</small></div></div></section>}
 
-  <section className="card capacityCard"><div className="capacityTitle"><div><b>인버터 정격용량</b><span>설비이용률(CF)과 등가 발전시간 계산에 사용됩니다.</span></div><div className="capacityTotal">합계 <strong>{totalCap?`${one.format(totalCap)} kW`:'미설정'}</strong></div></div><div className="capacityInputs"><label>인버터 1 <input inputMode="decimal" value={cap1} onChange={e=>saveCapacity(1,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><label>인버터 2 <input inputMode="decimal" value={cap2} onChange={e=>saveCapacity(2,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><div className="formula">설비이용률 = 발전량 ÷ (정격용량 × 24시간 × 일수) × 100 · 등가 발전시간 = 발전량 ÷ 정격용량</div></div></section>
+  <nav className="card sectionNavBar" aria-label="페이지 내 네비게이션">{sectionNavItems.map(([id,label])=><a key={id} href={`#${id}`} className="sectionNavLink">{label}</a>)}</nav>
 
-  <section className="controls card stickyControls"><div className="presetRow">{presetButtons.map(([k,t])=><button key={k} className={periodPreset===k?'preset active':'preset'} onClick={()=>applyPreset(k)}>{t}</button>)}</div><div className="controlRow"><div className="control"><label>집계</label><div className="segments">{[['hour','시간'],['day','일'],['month','월'],['season','계절'],['quarter','분기'],['year','년']].map(([v,t])=><button key={v} className={grain===v?'active':''} onClick={()=>setGrain(v)}>{t}</button>)}</div></div><div className="control"><label>막대 그래프</label><div className="segments metricSeg">{[['revenue','수익'],['kwh','발전량']].map(([v,t])=><button key={v} className={barMetric===v?'active':''} onClick={()=>setBarMetric(v)}>{t}</button>)}</div></div><div className="control"><label>라인 그래프</label><div className="segments metricSeg">{[['smp','SMP'],['efficiency','설비이용률'],['generationHours','발전시간']].map(([v,t])=><button key={v} className={lineMetric===v?'active':''} onClick={()=>setLineMetric(v)}>{t}</button>)}</div></div><div className="control"><label>인버터 표시</label><div className="segments inverterSeg">{[['total','합계'],['inv1','1'],['inv2','2'],['both','1+2']].map(([v,t])=><button key={v} className={inverterMode===v?'active':''} onClick={()=>setInverterMode(v)}>{t}</button>)}</div></div><div className="control"><label>동기간 비교</label><div className="segments compareSeg">{[1,2,3].map(n=><button key={n} className={compare.includes(n)?'active':''} onClick={()=>toggleCompare(n)}>{n}년전</button>)}</div></div>{(lineMetric==='efficiency'||lineMetric==='generationHours')&&<div className="control"><label>전국·지역 비교</label><div className="segments"><button className={showRegion?'active':''} onClick={()=>setShowRegion(v=>!v)}>{showRegion?'전국·지역 ON':'전국·지역 OFF'}</button></div></div>}<div className="control"><label>최고·최저 마커</label><div className="segments"><button className={showMaxPoint?'active':''} onClick={()=>setShowMaxPoint(v=>!v)}>최고점</button><button className={showMinPoint?'active':''} onClick={()=>setShowMinPoint(v=>!v)}>최저점</button></div></div><div className="control dates"><label>기간</label><div><input type="date" value={start} disabled={periodPreset!=='custom'} onChange={e=>setStart(e.target.value)}/><span>~</span><input type="date" value={end} disabled={periodPreset!=='custom'} onChange={e=>setEnd(e.target.value)}/></div></div></div></section>
+  <section id="equipment-docs" className="card equipmentDocsCard navTarget">
+    <div className="sectionTitle"><div><h2>설비 확인 문서</h2><p>문서를 바로 미리보거나, 배포된 대시보드의 PDF 링크를 복사해 공유할 수 있습니다.</p></div></div>
+    <div className="equipmentDocGrid">{equipmentDocs.map(doc=><article className="equipmentDocItem" key={doc.key}><div className="equipmentDocIcon">PDF</div><div className="equipmentDocMeta"><b>{doc.title}</b><span>{doc.subtitle}</span></div><div className="equipmentDocActions"><button type="button" className="docPreviewBtn" onClick={()=>openEquipmentDoc(doc)}>팝업 보기</button><button type="button" className="docCopyBtn" onClick={()=>copyEquipmentDocLink(doc)}>링크 복사</button><a href={doc.path} target="_blank" rel="noreferrer">새 탭 ↗</a></div></article>)}</div>
+    {docCopyMessage&&<div className="docCopyMessage">{docCopyMessage}</div>}
+  </section>
+
+  <section id="overview" className="card capacityCard navTarget"><div className="capacityTitle"><div><b>인버터 정격용량</b><span>설비이용률(CF)과 등가 발전시간 계산에 사용됩니다.</span></div><div className="capacityTotal">합계 <strong>{totalCap?`${one.format(totalCap)} kW`:'미설정'}</strong></div></div><div className="capacityInputs"><label>인버터 1 <input inputMode="decimal" value={cap1} onChange={e=>saveCapacity(1,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><label>인버터 2 <input inputMode="decimal" value={cap2} onChange={e=>saveCapacity(2,e.target.value)} placeholder="kW 입력"/><span>kW</span></label><div className="formula">설비이용률 = 발전량 ÷ (정격용량 × 24시간 × 일수) × 100 · 등가 발전시간 = 발전량 ÷ 정격용량</div></div></section>
+
+  <section className="controls card stickyControls"><div className="presetRow">{presetButtons.map(([k,t])=><button key={k} className={periodPreset===k?'preset active':'preset'} onClick={()=>applyPreset(k)}>{t}</button>)}</div><div className="controlRow"><div className="control"><label>집계</label><div className="segments">{[['hour','시간'],['day','일'],['month','월'],['season','계절'],['quarter','분기'],['year','년']].map(([v,t])=><button key={v} className={grain===v?'active':''} onClick={()=>setGrain(v)}>{t}</button>)}</div></div><div className="control"><label>막대 그래프</label><div className="segments metricSeg">{[['revenue','수익'],['kwh','발전량']].map(([v,t])=><button key={v} className={barMetric===v?'active':''} onClick={()=>setBarMetric(v)}>{t}</button>)}</div></div><div className="control"><label>라인 그래프</label><div className="segments metricSeg">{[['smp','SMP'],['efficiency','설비이용률'],['generationHours','발전시간'],['avgDailyGenerationHours','일평균 등가시간']].map(([v,t])=><button key={v} className={lineMetric===v?'active':''} onClick={()=>setLineMetric(v)}>{t}</button>)}</div></div><div className="control"><label>인버터 표시</label><div className="segments inverterSeg">{[['total','합계'],['inv1','1'],['inv2','2'],['both','1+2']].map(([v,t])=><button key={v} className={inverterMode===v?'active':''} onClick={()=>setInverterMode(v)}>{t}</button>)}</div></div><div className="control"><label>동기간 비교</label><div className="segments compareSeg">{[1,2,3].map(n=><button key={n} className={compare.includes(n)?'active':''} onClick={()=>toggleCompare(n)}>{n}년전</button>)}</div></div>{regionComparable&&<div className="control"><label>전국·지역 비교</label><div className="segments"><button className={showRegion?'active':''} onClick={()=>setShowRegion(v=>!v)}>{showRegion?'전국·지역 ON':'전국·지역 OFF'}</button></div></div>}<div className="control"><label>최고·최저 마커</label><div className="segments"><button className={showMaxPoint?'active':''} onClick={()=>setShowMaxPoint(v=>!v)}>최고점</button><button className={showMinPoint?'active':''} onClick={()=>setShowMinPoint(v=>!v)}>최저점</button></div></div><div className="control dates"><label>기간</label><div><input type="date" value={start} disabled={periodPreset!=='custom'} onChange={e=>setStart(e.target.value)}/><span>~</span><input type="date" value={end} disabled={periodPreset!=='custom'} onChange={e=>setEnd(e.target.value)}/></div></div></div></section>
 
   {error&&<div className="error">{error}</div>}
   {diag&&<section className="card diagPanel"><div><b>서비스계정:</b> {diag.clientEmail||'-'}</div><div><b>대상 폴더:</b> {diag.folder?.name||'(접근 실패)'}</div><div><b>발전 Excel:</b> {diag.generationExcelCount??0}개 · <b>SMP Excel:</b> {diag.smpExcelCount??0}개</div><div className={diag.generationExcelCount>0?'diagOk':'smpErr'}>{diag.note}</div></section>}
 
-  <section className="kpis kpis6"><Kpi label={`${inverterLabels[inverterMode]} 발전량`} value={data?`${one.format(selectedGeneration||0)} kWh`:'-'}/><Kpi label="SMP 기준 수익" value={data?`${nf.format(data.kpi.totalRevenue)} 원`:'-'}/><Kpi label="월평균 SMP" value={data?.kpi.weightedSmp!=null?`${two.format(data.kpi.weightedSmp)} 원/kWh`:'공식값 없음'}/><Kpi label="설비이용률" value={selectedEfficiency!=null?`${two.format(selectedEfficiency)} %`:totalCap?'계산 불가':'용량 입력 필요'}/><Kpi label="등가 발전시간" value={data?.kpi.generationHours!=null?`${two.format(data.kpi.generationHours)} h`:'-'}/><Kpi label="일평균 등가시간" value={data?.kpi.avgDailyGenerationHours!=null?`${two.format(data.kpi.avgDailyGenerationHours)} h/일`:'-'}/></section>
+  <section className="kpis kpis6"><Kpi label={`${inverterLabels[inverterMode]} 발전량`} value={data?`${one.format(selectedGeneration||0)} kWh`:'-'}/><Kpi label="SMP 기준 수익" value={data?`${nf.format(data.kpi.totalRevenue)} 원`:'-'}/><Kpi label="월평균 SMP" value={data?.kpi.weightedSmp!=null?`${two.format(data.kpi.weightedSmp)} 원/kWh`:'공식값 없음'}/><Kpi label="설비이용률" value={selectedEfficiency!=null?`${two.format(selectedEfficiency)} %`:totalCap?'계산 불가':'용량 입력 필요'}/><Kpi label="등가 발전시간" value={selectedGenerationHours!=null?`${two.format(selectedGenerationHours)} h`:'-'}/><Kpi label="일평균 등가시간" value={selectedAvgDailyGenerationHours!=null?`${two.format(selectedAvgDailyGenerationHours)} h/일`:'-'}/></section>
 
-  <section className="card chartCard"><div className="sectionTitle"><div><h2>{barMetricLabels[barMetric]} 막대 + {lineMetricLabels[lineMetric]} 라인 · {inverterLabels[inverterMode]}{(lineMetric==='efficiency'||lineMetric==='generationHours')&&showRegion?' · 전국·지역 평균 비교':''}</h2><p>그래프 위에서 휠/두 손가락으로 확대·축소, 드래그로 이동할 수 있습니다.</p></div><span className="pill">발전파일 {data?.fileCount??0}개</span></div><div className="chartWrap"><ReactECharts key={chartKey} ref={chartRef} option={option} notMerge={true} lazyUpdate={false} style={{height:'100%',width:'100%'}} opts={{renderer:'canvas'}}/></div></section>
+  <section id="main-chart" className="card chartCard navTarget"><div className="sectionTitle"><div><h2>{barMetricLabels[barMetric]} 막대 + {lineMetricLabels[lineMetric]} 라인 · {inverterLabels[inverterMode]}{regionComparable&&showRegion?' · 전국·지역 평균 비교':''}</h2><p>그래프 위에서 휠/두 손가락으로 확대·축소, 드래그로 이동할 수 있습니다.</p></div><span className="pill">발전파일 {data?.fileCount??0}개</span></div><div className="chartWrap"><ReactECharts key={chartKey} ref={chartRef} option={option} notMerge={true} lazyUpdate={false} style={{height:'100%',width:'100%'}} opts={{renderer:'canvas'}}/></div></section>
 
-  {(lineMetric==='efficiency'||lineMetric==='generationHours')&&data?.benchmark&&<section className="card benchmarkCard"><div><b>전국·지역 평균 자동 비교</b><strong>{lineMetric==='efficiency'?`${two.format(data.benchmark.annualAverage)}%`:`${two.format(data.benchmark.annualGenerationHoursPerDay)} h/일`}</strong></div><p><b>{data.benchmark.region}</b> 월별 이용률과 전국 월별 이용률은 REcloud의 최신 공개 월별 표를 새로고침 때 자동 확인합니다. 현재 월별 공개 기준: {data.benchmark.year}년 · {data.benchmark.region} 연평균 {two.format(data.benchmark.annualAverage)}% (등가 {two.format(data.benchmark.annualGenerationHoursPerDay)}h/일) · 전국 연평균 {two.format(data.benchmark.nationalAnnualAverage)}% (등가 {two.format(data.benchmark.nationalAnnualGenerationHoursPerDay)}h/일). 전국 최신 태양광 평균은 {data.benchmark.nationalRate!=null?`${two.format(data.benchmark.nationalRate)}% / ${two.format(data.benchmark.latestNationalGenerationHoursPerDay)}h/일 (${data.benchmark.nationalPeriod||''})`:'조회 실패'}입니다. 지역별 분기 공개값은 {data.benchmark.period||'확인 중'} 기준 {data.benchmark.rate!=null?`${two.format(data.benchmark.rate)}% / ${two.format(data.benchmark.latestRegionGenerationHoursPerDay)}h/일`:'조회 실패'}입니다.</p>{data.benchmark.errors?.length>0&&<div className="benchmarkErr">{data.benchmark.errors.join(' / ')}</div>}</section>}
+  {regionComparable&&data?.benchmark&&<section className="card benchmarkCard"><div><b>전국·지역 평균 자동 비교</b><strong>{lineMetric==='efficiency'?`${two.format(data.benchmark.annualAverage)}%`:lineMetric==='generationHours'||lineMetric==='avgDailyGenerationHours'?`${two.format(data.benchmark.annualGenerationHoursPerDay)} h/일`:barMetric==='kwh'&&regionAnnualExpectedKwh!=null?`${nf.format(Math.round(regionAnnualExpectedKwh))} kWh/년`:`${two.format(data.benchmark.annualAverage)}%`}</strong></div><p><b>{data.benchmark.region}</b> 월별 이용률과 전국 월별 이용률은 REcloud의 최신 공개 월별 표를 새로고침 때 자동 확인합니다. 현재 월별 공개 기준: {data.benchmark.year}년 · {data.benchmark.region} 연평균 {two.format(data.benchmark.annualAverage)}% (일평균 등가 {two.format(data.benchmark.annualGenerationHoursPerDay)}h/일) · 전국 연평균 {two.format(data.benchmark.nationalAnnualAverage)}% (일평균 등가 {two.format(data.benchmark.nationalAnnualGenerationHoursPerDay)}h/일). {selectedCapacity>0&&<>현재 선택 설비용량 {one.format(selectedCapacity)}kW로 환산하면 연간 예상 발전량은 {data.benchmark.region} 약 {regionAnnualExpectedKwh==null?'-':nf.format(Math.round(regionAnnualExpectedKwh))}kWh, 전국 약 {nationalAnnualExpectedKwh==null?'-':nf.format(Math.round(nationalAnnualExpectedKwh))}kWh입니다. </>}전국 최신 태양광 평균은 {data.benchmark.nationalRate!=null?`${two.format(data.benchmark.nationalRate)}% / ${two.format(data.benchmark.latestNationalGenerationHoursPerDay)}h/일 (${data.benchmark.nationalPeriod||''})`:'조회 실패'}입니다. 지역별 분기 공개값은 {data.benchmark.period||'확인 중'} 기준 {data.benchmark.rate!=null?`${two.format(data.benchmark.rate)}% / ${two.format(data.benchmark.latestRegionGenerationHoursPerDay)}h/일`:'조회 실패'}입니다.</p><div className="termNote"><b>발전량 비교 환산식:</b> 지역/전국 평균 발전량 = 선택 설비용량(kW) × 해당 구간 평균 등가 발전시간(h). 일평균 등가시간은 등가 발전시간 ÷ 구간 일수로 계산합니다.</div>{data.benchmark.errors?.length>0&&<div className="benchmarkErr">{data.benchmark.errors.join(' / ')}</div>}</section>}
 
-  <section className="grid2"><div className="card tableCard"><div className="sectionTitle"><h2>동기간 요약</h2></div><div className="tableScroll"><table className="mobileSummary"><thead><tr><th>구분</th><th>기간</th><th>발전량</th><th>수익</th><th>평균 SMP</th><th>이용률</th><th>등가시간</th></tr></thead><tbody>{(data?.yearly||[]).map((r,i)=><tr key={i}><td data-label="구분">{r.label}</td><td data-label="기간">{r.period}</td><td data-label="발전량">{nf.format(r.kwh)}</td><td data-label="수익">{nf.format(r.revenue)}</td><td data-label="평균 SMP">{r.avgSmp==null?'-':two.format(r.avgSmp)}</td><td data-label="이용률">{r.efficiency==null?'-':`${two.format(r.efficiency)}%`}</td><td data-label="등가시간">{r.generationHours==null?'-':`${two.format(r.generationHours)}h`}</td></tr>)}</tbody></table></div></div><div className="card rules"><div className="sectionTitle"><h2>핵심 계산식</h2></div><ul><li><b>설비이용률(CF)</b> = 발전량(kWh) ÷ [설비용량(kW) × 기간시간(h)] × 100</li><li><b>동일식</b> = 등가 발전시간(h) ÷ 기간시간(h) × 100 · 하루 기준이면 등가 발전시간 ÷ 24 × 100</li><li><b>등가 발전시간</b> = 발전량(kWh) ÷ 설비용량(kW)</li><li><b>일평균 등가 발전시간</b> = 등가 발전시간 ÷ 조회일수</li><li><b>인버터 출력효율</b> = AC 출력 ÷ DC 입력 × 100 (현재 발전보고서에 DC 입력값이 없어 공식만 표시)</li><li><b>모듈 변환효율</b> = 모듈 출력 ÷ [일사강도(1,000W/㎡) × 모듈면적] × 100</li><li><b>SMP 수익</b> = 해당 월 발전량 × 해당 월 월평균 SMP</li></ul></div></section>
+  <section id="compare-summary" className="grid2 navTarget"><div className="card tableCard"><div className="sectionTitle"><h2>동기간 요약</h2></div><div className="tableScroll"><table className="mobileSummary"><thead><tr><th>구분</th><th>기간</th><th>발전량</th><th>수익</th><th>평균 SMP</th><th>이용률</th><th>등가시간</th></tr></thead><tbody>{(data?.yearly||[]).map((r,i)=><tr key={i}><td data-label="구분">{r.label}</td><td data-label="기간">{r.period}</td><td data-label="발전량">{nf.format(r.kwh)}</td><td data-label="수익">{nf.format(r.revenue)}</td><td data-label="평균 SMP">{r.avgSmp==null?'-':two.format(r.avgSmp)}</td><td data-label="이용률">{r.efficiency==null?'-':`${two.format(r.efficiency)}%`}</td><td data-label="등가시간">{r.generationHours==null?'-':`${two.format(r.generationHours)}h`}</td></tr>)}</tbody></table></div></div><div className="card rules"><div className="sectionTitle"><h2>핵심 계산식</h2></div><ul><li><b>설비이용률(CF)</b> = 발전량(kWh) ÷ [설비용량(kW) × 기간시간(h)] × 100</li><li><b>동일식</b> = 등가 발전시간(h) ÷ 기간시간(h) × 100 · 하루 기준이면 등가 발전시간 ÷ 24 × 100</li><li><b>등가 발전시간</b> = 발전량(kWh) ÷ 설비용량(kW)</li><li><b>일평균 등가 발전시간</b> = 등가 발전시간 ÷ 조회일수</li><li><b>인버터 출력효율</b> = AC 출력 ÷ DC 입력 × 100 (현재 발전보고서에 DC 입력값이 없어 공식만 표시)</li><li><b>모듈 변환효율</b> = 모듈 출력 ÷ [일사강도(1,000W/㎡) × 모듈면적] × 100</li><li><b>SMP 수익</b> = 해당 월 발전량 × 해당 월 월평균 SMP</li></ul></div></section>
 
 
-  <section className="card terminologyCard"><div className="sectionTitle"><div><h2>용어 및 계산 정리</h2><p>발전량, 발전시간, 설비이용률, 변환효율은 서로 다른 개념입니다.</p></div></div><div className="termGrid"><div><b>설비용량 (kW)</b><span>발전소가 정격조건에서 낼 수 있는 최대 출력입니다. 현재 입력값 기준 인버터1 {one.format(c1)}kW + 인버터2 {one.format(c2)}kW = 합계 {one.format(totalCap)}kW입니다.</span></div><div><b>발전량 (kWh)</b><span>일정 기간 동안 실제로 생산한 전기에너지의 누적량입니다.</span></div><div><b>등가 발전시간 (h)</b><code>발전량(kWh) ÷ 설비용량(kW)</code><span>정격출력으로 몇 시간 발전한 것과 같은지를 나타냅니다. 예: 199kW 설비가 796kWh 생산 → 4.0시간.</span></div><div><b>설비이용률 (CF, %)</b><code>발전량 ÷ (설비용량 × 기간시간) × 100</code><span>또는 <b>등가 발전시간 ÷ 기간시간 × 100</b>. 하루라면 기간시간=24시간이므로 블로그 식처럼 <b>발전시간 ÷ 24 × 100</b>과 동일합니다.</span></div><div><b>일평균 등가 발전시간 (h/일)</b><code>조회기간 등가 발전시간 ÷ 조회일수</code><span>태양광 현장에서 흔히 ‘하루 발전시간’이라고 부르는 값에 가깝습니다.</span></div><div><b>인버터 변환효율 (%)</b><code>AC 출력 ÷ DC 입력 × 100</code><span>DC를 AC로 바꾸는 장치 효율로, 설비이용률과는 다른 지표입니다. DC 입력값이 있어야 계산할 수 있습니다.</span></div><div><b>모듈 변환효율 (%)</b><code>모듈 전기출력 ÷ (일사강도 × 모듈면적) × 100</code><span>태양광 모듈 자체의 광→전기 변환 성능입니다.</span></div><div><b>SMP 수익</b><code>해당 월 발전량(kWh) × 해당 월 월평균 SMP(원/kWh)</code><span>현재 대시보드 정산 추정에 사용하는 계산 기준입니다.</span></div><div><b>REC 소수점·이월 규칙</b><code>당월 산정 REC = 공급전력량(kWh) ÷ 1,000 × 가중치</code><span>산정값은 <b>소수점 셋째 자리까지 보유</b>하고 <b>넷째 자리 이하는 절사</b>합니다. 전월에서 이월된 소수 REC를 더한 뒤 정수 부분만 발급하고, 1 REC 미만 소수부는 다음 달로 자동 이월합니다.</span></div></div><div className="termNote"><b>중요:</b> 이 대시보드의 ‘설비이용률’은 인버터 정격용량 합계를 설비용량으로 사용합니다. 실제 공식 신고 설비용량이 인버터 합계와 다르면 그 신고 용량을 입력하는 것이 정확합니다.</div></section>
+  <section id="terms" className="card terminologyCard navTarget"><div className="sectionTitle"><div><h2>용어 및 계산 정리</h2><p>발전량, 발전시간, 설비이용률, 변환효율은 서로 다른 개념입니다.</p></div></div><div className="termGrid"><div><b>설비용량 (kW)</b><span>발전소가 정격조건에서 낼 수 있는 최대 출력입니다. 현재 입력값 기준 인버터1 {one.format(c1)}kW + 인버터2 {one.format(c2)}kW = 합계 {one.format(totalCap)}kW입니다.</span></div><div><b>발전량 (kWh)</b><span>일정 기간 동안 실제로 생산한 전기에너지의 누적량입니다.</span></div><div><b>등가 발전시간 (h)</b><code>발전량(kWh) ÷ 설비용량(kW)</code><span>정격출력으로 몇 시간 발전한 것과 같은지를 나타냅니다. 예: 199kW 설비가 796kWh 생산 → 4.0시간.</span></div><div><b>설비이용률 (CF, %)</b><code>발전량 ÷ (설비용량 × 기간시간) × 100</code><span>또는 <b>등가 발전시간 ÷ 기간시간 × 100</b>. 하루라면 기간시간=24시간이므로 블로그 식처럼 <b>발전시간 ÷ 24 × 100</b>과 동일합니다.</span></div><div><b>일평균 등가 발전시간 (h/일)</b><code>조회기간 등가 발전시간 ÷ 조회일수</code><span>태양광 현장에서 흔히 ‘하루 발전시간’이라고 부르는 값에 가깝습니다.</span></div><div><b>인버터 변환효율 (%)</b><code>AC 출력 ÷ DC 입력 × 100</code><span>DC를 AC로 바꾸는 장치 효율로, 설비이용률과는 다른 지표입니다. DC 입력값이 있어야 계산할 수 있습니다.</span></div><div><b>모듈 변환효율 (%)</b><code>모듈 전기출력 ÷ (일사강도 × 모듈면적) × 100</code><span>태양광 모듈 자체의 광→전기 변환 성능입니다.</span></div><div><b>SMP 수익</b><code>해당 월 발전량(kWh) × 해당 월 월평균 SMP(원/kWh)</code><span>현재 대시보드 정산 추정에 사용하는 계산 기준입니다.</span></div><div><b>REC 소수점·이월 규칙</b><code>당월 산정 REC = 공급전력량(kWh) ÷ 1,000 × 가중치</code><span>산정값은 <b>소수점 셋째 자리까지 보유</b>하고 <b>넷째 자리 이하는 절사</b>합니다. 전월에서 이월된 소수 REC를 더한 뒤 정수 부분만 발급하고, 1 REC 미만 소수부는 다음 달로 자동 이월합니다.</span></div></div><div className="termNote"><b>중요:</b> 이 대시보드의 ‘설비이용률’은 인버터 정격용량 합계를 설비용량으로 사용합니다. 실제 공식 신고 설비용량이 인버터 합계와 다르면 그 신고 용량을 입력하는 것이 정확합니다.</div></section>
 
-  <section className="card formulaCard"><div className="sectionTitle"><div><h2>발전량 예측·효율 계산 참고식</h2><p>실측 대시보드 값과 예측식을 구분해 표시합니다.</p></div></div><div className="formulaGrid"><div><b>① 일조시간 기반</b><code>연간 발전량 = 설치용량 × 연간 일조시간 × 0.6</code><span>일조시간 대비 실제 등가발전시간을 약 60%로 보는 간이식</span></div><div><b>② 일사량 기반</b><code>일 발전량 = 일사량(kWh/㎡/일) × 모듈면적 × 모듈효율</code><span>연간값은 일 발전량 × 365</span></div><div><b>③ 신재생에너지 생산량 기반</b><code>연간 생산량 = 설치규모 × 단위 에너지생산량 × 보정계수</code><span>공공 설계·예측용 참고식</span></div></div></section>
+  <section id="formula" className="card formulaCard navTarget"><div className="sectionTitle"><div><h2>발전량 예측·효율 계산 참고식</h2><p>실측 대시보드 값과 예측식을 구분해 표시합니다.</p></div></div><div className="formulaGrid"><div><b>① 일조시간 기반</b><code>연간 발전량 = 설치용량 × 연간 일조시간 × 0.6</code><span>일조시간 대비 실제 등가발전시간을 약 60%로 보는 간이식</span></div><div><b>② 일사량 기반</b><code>일 발전량 = 일사량(kWh/㎡/일) × 모듈면적 × 모듈효율</code><span>연간값은 일 발전량 × 365</span></div><div><b>③ 신재생에너지 생산량 기반</b><code>연간 생산량 = 설치규모 × 단위 에너지생산량 × 보정계수</code><span>공공 설계·예측용 참고식</span></div></div></section>
 
-  {data?.rec&&<section className="card recCard">
+  {data?.rec&&<section id="rec-section" className="card recCard navTarget">
     <div className="sectionTitle"><div><h2>REC 발급량 · REC 단가 · 수익화 관리</h2><p>REC 발급 예상량과 시세를 확인하고, 실제로 수익화한 내역은 월별 칸이 아니라 아래 <b>수익화 거래내역</b>에 일자별로 계속 누적 저장합니다.</p></div><a className="actionLink" href="https://rps.energy.or.kr/login.do" target="_blank" rel="noreferrer">REC 발급신청 ↗</a></div>
     <div className="recKpis recKpis6">
       <div><span>조회기간 예상 발급 REC</span><strong>{nf.format(data.rec.estimatedRec)} REC</strong></div>
@@ -359,15 +418,25 @@ export default function Dashboard(){
       <div><span>누적 수익화 금액</span><strong>{nf.format(data.rec.ledger?.cumulativeMonetizedAmount||0)} 원</strong></div>
       <div><span>선택 기준 평가금액</span><strong>{recSelectedValuationAmount==null?'-':`${nf.format(recSelectedValuationAmount)} 원`}</strong></div>
     </div>
-    <div className="recChartControls">
-      <div className="recControlGroup"><label>막대 그래프</label><div className="segments"><button className={recBarMetric==='issuance'?'active':''} onClick={()=>setRecBarMetric('issuance')}>발급량</button><button className={recBarMetric==='amount'?'active':''} onClick={()=>setRecBarMetric('amount')}>금액</button></div></div>
-      {recBarMetric==='amount'&&<div className="recControlGroup"><label>금액 계산 단가</label><div className="segments"><button className={recPriceMode==='current'?'active':''} onClick={()=>setRecPriceMode('current')}>현재 REC 단가</button><button className={recPriceMode==='date'?'active':''} onClick={()=>setRecPriceMode('date')}>특정 일자</button></div></div>}
-      {recBarMetric==='amount'&&recPriceMode==='date'&&<div className="recControlGroup recDatePrice"><label>기준 일자</label><input type="date" value={recPriceDate} onChange={e=>setRecPriceDate(e.target.value)}/></div>}
-      {recBarMetric==='amount'&&<div className="recPriceStatus"><b>{recPriceLoading?'가격 조회 중…':recValuationPrice==null?'기준 단가 없음':`${nf.format(recValuationPrice)} 원/REC`}</b><span>{recValuationDate?`가격 기준 거래일 ${String(recValuationDate).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3')}`:''}{recPriceMode==='date'&&recPriceLookup?.fromCache?' · Drive 일별 캐시 사용':''}</span>{recPriceLookup&&!recPriceLookup.ok&&<span className="smpErr">{recPriceLookup.message}</span>}</div>}
-      <div className="recControlGroup recSupplyRatioControl"><label>REC 공급량 추정비율</label><div className="inputUnit compactInput"><input inputMode="decimal" value={recSupplyRatioPct} onChange={e=>saveRecSupplyRatio(e.target.value)} /><em>%</em></div><span className="controlHint">RPS 발급내역 Excel이 있으면 실제 공급전력량을 우선 사용합니다.</span></div>
-      <div className="recControlGroup recAxisControl"><label>REC 단가축</label><div className="segments"><button className={recPriceAxisMode==='auto'?'active':''} onClick={()=>saveRecAxisMode('auto')}>자동</button><button className={recPriceAxisMode==='manual'?'active':''} onClick={()=>saveRecAxisMode('manual')}>직접 설정</button></div><span className="controlHint">자동: 조회 최저·최고 단가를 1,000원 단위 절사 후 각각 -1,000원 / +1,000원으로 축 범위를 잡습니다.</span></div>
-      {recPriceAxisMode==='manual'&&<div className="recControlGroup recAxisFields"><label>축 최소 / 최대</label><div className="axisFieldRow"><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMin} onChange={e=>saveRecAxisValue('min',e.target.value)} placeholder={recAutoPriceAxis.min==null?'최소':String(recAutoPriceAxis.min)}/><em>원</em></div><span>~</span><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMax} onChange={e=>saveRecAxisValue('max',e.target.value)} placeholder={recAutoPriceAxis.max==null?'최대':String(recAutoPriceAxis.max)}/><em>원</em></div></div>{!recManualAxisValid&&<span className="controlHint axisWarn">최대값은 최소값보다 크게 입력하세요. 잘못된 경우 자동축을 사용합니다.</span>}</div>}
-      {recPriceAxisMode==='auto'&&recAutoPriceAxis.min!=null&&<div className="recPriceStatus recAxisStatus"><b>{nf.format(recAutoPriceAxis.min)} ~ {nf.format(recAutoPriceAxis.max)} 원/REC</b><span>조회 단가 {nf.format(Math.round(recAutoPriceAxis.dataMin))} ~ {nf.format(Math.round(recAutoPriceAxis.dataMax))}원 기준 자동축</span></div>}
+    <div className="recSettingGrid">
+      <div className="recSettingCard">
+        <div className="recSettingHead"><b>그래프 설정</b><span>REC 막대와 금액 산정 기준을 선택합니다.</span></div>
+        <div className="recControlGroup"><label>막대 그래프</label><div className="segments"><button className={recBarMetric==='issuance'?'active':''} onClick={()=>setRecBarMetric('issuance')}>발급량</button><button className={recBarMetric==='amount'?'active':''} onClick={()=>setRecBarMetric('amount')}>금액</button></div></div>
+        {recBarMetric==='amount'&&<div className="recControlGroup"><label>금액 계산 단가</label><div className="segments"><button className={recPriceMode==='current'?'active':''} onClick={()=>setRecPriceMode('current')}>현재 REC 단가</button><button className={recPriceMode==='date'?'active':''} onClick={()=>setRecPriceMode('date')}>특정 일자</button></div></div>}
+        {recBarMetric==='amount'&&recPriceMode==='date'&&<div className="recControlGroup recDatePrice"><label>기준 일자</label><input type="date" value={recPriceDate} onChange={e=>setRecPriceDate(e.target.value)}/></div>}
+        {recBarMetric==='amount'&&<div className="recPriceStatus"><b>{recPriceLoading?'가격 조회 중…':recValuationPrice==null?'기준 단가 없음':`${nf.format(recValuationPrice)} 원/REC`}</b><span>{recValuationDate?`가격 기준 거래일 ${String(recValuationDate).replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3')}`:''}{recPriceMode==='date'&&recPriceLookup?.fromCache?' · Drive 일별 캐시 사용':''}</span>{recPriceLookup&&!recPriceLookup.ok&&<span className="smpErr">{recPriceLookup.message}</span>}</div>}
+      </div>
+      <div className="recSettingCard">
+        <div className="recSettingHead"><b>REC 산정 기준</b><span>실제 공급전력량이 없을 때 적용하는 추정 비율입니다.</span></div>
+        <div className="recControlGroup recSupplyRatioControl"><label>REC 공급량 추정비율</label><div className="inputUnit compactInput"><input inputMode="decimal" value={recSupplyRatioPct} onChange={e=>saveRecSupplyRatio(e.target.value)} /><em>%</em></div><span className="controlHint">RPS 발급내역 Excel이 있으면 실제 공급전력량을 우선 사용합니다.</span></div>
+        <div className="recInlineInfo"><span>현재 적용비율</span><b>{one.format((Number(recSupplyRatioPct)||0))}%</b></div>
+      </div>
+      <div className="recSettingCard">
+        <div className="recSettingHead"><b>REC 단가축</b><span>자동 또는 직접 입력으로 오른쪽 축 범위를 조정합니다.</span></div>
+        <div className="recControlGroup recAxisControl"><label>축 설정 방식</label><div className="segments"><button className={recPriceAxisMode==='auto'?'active':''} onClick={()=>saveRecAxisMode('auto')}>자동</button><button className={recPriceAxisMode==='manual'?'active':''} onClick={()=>saveRecAxisMode('manual')}>직접 설정</button></div><span className="controlHint">자동: 최저·최고 REC 단가를 1,000원 단위로 내린 뒤 최소축은 -1,000원, 최대축은 +1,000원 적용</span></div>
+        {recPriceAxisMode==='manual'&&<div className="recControlGroup recAxisFields"><label>축 최소 / 최대</label><div className="axisFieldRow"><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMin} onChange={e=>saveRecAxisValue('min',e.target.value)} placeholder={recAutoPriceAxis.min==null?'최소':String(recAutoPriceAxis.min)}/><em>원</em></div><span>~</span><div className="inputUnit compactInput"><input inputMode="numeric" value={recPriceAxisMax} onChange={e=>saveRecAxisValue('max',e.target.value)} placeholder={recAutoPriceAxis.max==null?'최대':String(recAutoPriceAxis.max)}/><em>원</em></div></div>{!recManualAxisValid&&<span className="controlHint axisWarn">최대값은 최소값보다 크게 입력하세요. 잘못된 경우 자동축을 사용합니다.</span>}</div>}
+        {recPriceAxisMode==='auto'&&recAutoPriceAxis.min!=null&&<div className="recPriceStatus recAxisStatus"><b>{nf.format(recAutoPriceAxis.min)} ~ {nf.format(recAutoPriceAxis.max)} 원/REC</b><span>조회 단가 {nf.format(Math.round(recAutoPriceAxis.dataMin))} ~ {nf.format(Math.round(recAutoPriceAxis.dataMax))}원 기준 자동축</span></div>}
+      </div>
     </div>
     <div className="recRule"><b>{data.rec.rule}</b><span><b>소수점 처리:</b> 소수점 넷째 자리 이하는 절사하고 셋째 자리까지 관리합니다. 전월 이월 REC + 당월 산정 REC 중 <b>정수 부분만 발급</b>하며 남은 소수부는 다음 달로 이월합니다.</span><span><b>중요:</b> REC는 발전보고서 전체 발전량이 아니라 RPS가 인정한 <b>공급전력량</b>을 기준으로 계산합니다.</span><span>{data.rec.priceRule}</span><span>{data.rec.assumption}</span><span>금액 보기에서는 <b>현재 REC 단가</b> 또는 사용자가 고른 <b>특정 일자의 최근 거래가격</b>을 모든 발급량에 동일 적용합니다.</span><span>REC 발급신청 기한: <b>전력공급일이 속한 달의 말일부터 90일 이내</b>.</span></div>
     {data.rec.marketHistory?.cache&&<div className="recCacheStatus"><b>REC API 호출 절약 캐시</b><span>Drive 누적 {nf.format(data.rec.marketHistory.cache.rows||0)}개월 · 이번 화면 캐시 재사용 {nf.format(data.rec.marketHistory.cache.hits||0)}개월 · 신규 API 호출 {nf.format(data.rec.marketHistory.cache.apiCalls||0)}회</span><span>월별 가격: {data.rec.marketHistory.cache.file||'REC_현물시장_월별캐시.xlsx'} · 특정일 가격은 REC_현물시장_일별캐시.xlsx에 누적됩니다.</span><span>수익화 거래내역: {data.rec.ledger?.file||'REC_수익화_수기입력.xlsx'} · 저장/수정하려면 서비스계정을 Drive 폴더에 편집자로 공유해야 합니다.</span>{data.rec.marketHistory.cache.saveError&&<span className="smpErr">Drive 저장 실패: {data.rec.marketHistory.cache.saveError}</span>}{data.rec.ledger?.error&&<span className="smpErr">수익화 파일 읽기 실패: {data.rec.ledger.error}</span>}</div>}
@@ -392,10 +461,12 @@ export default function Dashboard(){
     <div className="recTablePager"><span>최신순 · {Math.min(recVisible,recRowsSorted.length)} / {recRowsSorted.length}개 표시</span><div>{recVisible>10&&<button type="button" onClick={()=>setRecVisible(10)}>접기</button>}{recRowsRemaining>0&&<button type="button" className="primary" onClick={()=>setRecVisible(v=>Math.min(v+10,recRowsSorted.length))}>10개 더보기 (남은 {recRowsRemaining}개)</button>}</div></div>
   </section>}
 
-  <section className="card linksCard"><div className="sectionTitle"><div><h2>자료 업데이트·업무 링크</h2><p>계속 갱신하는 원자료와 신청/분석 페이지를 한곳에 정리했습니다.</p></div></div><div className="tableScroll"><table className="linksTable"><thead><tr><th>자료</th><th>용도</th><th>갱신</th><th>바로가기</th></tr></thead><tbody>{(data?.links||[]).map((r,i)=><tr key={i}><td>{r.name}</td><td>{r.purpose}</td><td>{r.update}</td><td><a href={r.url} target="_blank" rel="noreferrer">열기 ↗</a></td></tr>)}</tbody></table></div></section>
+  <section id="links-section" className="card linksCard navTarget"><div className="sectionTitle"><div><h2>자료 업데이트·업무 링크</h2><p>계속 갱신하는 원자료와 신청/분석 페이지를 한곳에 정리했습니다.</p></div></div><div className="tableScroll"><table className="linksTable"><thead><tr><th>자료</th><th>용도</th><th>갱신</th><th>바로가기</th></tr></thead><tbody>{(data?.links||[]).map((r,i)=><tr key={i}><td>{r.name}</td><td>{r.purpose}</td><td>{r.update}</td><td><a href={r.url} target="_blank" rel="noreferrer">열기 ↗</a></td></tr>)}</tbody></table></div></section>
 
-  {data?.smpMeta&&<section className="card smpStatus"><b>SMP 상태</b><div><b>계산 기준:</b> {data.smpMeta.pricingRule||'월평균 SMP'}</div><div>Drive 확인: {new Date(data.smpMeta.fetchedAt).toLocaleString('ko-KR')}</div>{(data.smpMeta.yearStatus||[]).map((s,i)=><div key={i}>{s.year}: {s.source} · {nf.format(s.rows||0)}건 {s.file?`· ${s.file}`:''}</div>)}{(data.smpMeta.errors||[]).map((e,i)=><div key={i} className="smpErr">{e}</div>)}</section>}
+  <div id="status-section" className="navTarget"></div>{data?.smpMeta&&<section className="card smpStatus"><b>SMP 상태</b><div><b>계산 기준:</b> {data.smpMeta.pricingRule||'월평균 SMP'}</div><div>Drive 확인: {new Date(data.smpMeta.fetchedAt).toLocaleString('ko-KR')}</div>{(data.smpMeta.yearStatus||[]).map((s,i)=><div key={i}>{s.year}: {s.source} · {nf.format(s.rows||0)}건 {s.file?`· ${s.file}`:''}</div>)}{(data.smpMeta.errors||[]).map((e,i)=><div key={i} className="smpErr">{e}</div>)}</section>}
   {data?.errors?.length>0&&<section className="card warning"><b>읽지 못한 발전파일 {data.errors.length}개</b>{data.errors.map((e,i)=><div key={i}>{e.file}: {e.error}</div>)}</section>}
+
+  {docModal&&<div className="pdfModalBackdrop" role="presentation" onMouseDown={e=>{if(e.target===e.currentTarget)setDocModal(null)}}><div className="pdfModalPanel" role="dialog" aria-modal="true" aria-label={docModal.title}><div className="pdfModalHeader"><div><b>{docModal.title}</b><span>{docModal.subtitle}</span></div><div className="pdfModalActions"><button type="button" onClick={()=>copyEquipmentDocLink(docModal)}>링크 복사</button><a href={docModal.path} target="_blank" rel="noreferrer">새 탭 ↗</a><button type="button" className="pdfCloseBtn" onClick={()=>setDocModal(null)}>닫기 ✕</button></div></div><div className="pdfModalBody"><iframe src={`${docModal.path}#view=FitH`} title={docModal.title}/></div><div className="pdfModalFooter"><span>모바일에서 PDF가 보이지 않으면 ‘새 탭’으로 열어주세요.</span>{docCopyMessage&&<b>{docCopyMessage}</b>}</div></div></div>}
   </main>
 }
 function Kpi({label,value}){return <div className="card kpi"><span>{label}</span><strong>{value}</strong></div>}
