@@ -1,0 +1,12 @@
+{
+  "region": "충북",
+  "year": 2024,
+  "unit": "%",
+  "metric": "태양광 설비 이용률",
+  "monthly": [9.5, 9.0, 15.4, 16.8, 20.5, 19.7, 13.2, 17.4, 14.5, 11.1, 10.5, 10.0],
+  "annualAverage": 14.0,
+  "nationalMonthly": [10.5, 9.8, 16.0, 16.7, 20.7, 19.1, 13.7, 18.0, 14.9, 11.8, 11.0, 10.4],
+  "nationalAnnualAverage": 14.4,
+  "source": "한국에너지공단 재생에너지 클라우드플랫폼 RPS 발전설비 이용률",
+  "sourceUrl": "https://recloud.energy.or.kr/rps/present/sub2_1_1.do?engy=1"
+}

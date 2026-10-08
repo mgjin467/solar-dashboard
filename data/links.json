@@ -1,0 +1,14 @@
+[
+  {"name":"발전보고서","purpose":"인버터별 발전량 원본 다운로드 후 Google Drive 업로드","url":"https://dy.dycni.com:4295/local/inverter.do","update":"수시 / 월·연 보고서"},
+  {"name":"육지 SMP","purpose":"KPX 육지 SMP 확인·연도별 Excel 다운로드 후 Drive 업로드","url":"https://www.kpx.or.kr/smpInland.es?mid=a10404080100&device=pc","update":"수시 / 월평균 정산"},
+  {"name":"REC 가격 파일데이터","purpose":"한국전력거래소 오늘의 REC 시장 파일데이터","url":"https://www.data.go.kr/data/15090556/fileData.do","update":"공공데이터포털 등록자료"},
+  {"name":"REC 현물시장 OpenAPI","purpose":"REC 현물시장 거래건수·평균가·거래량 실시간 조회","url":"https://www.data.go.kr/data/15099762/openapi.do","update":"실시간"},
+  {"name":"지역 평균 이용률","purpose":"충북·전국 태양광 이용률 자동 비교 원자료","url":"https://recloud.energy.or.kr/rps/present/sub2_1_1.do?engy=1","update":"한국에너지공단 공개자료 갱신 시 자동 반영"},
+  {"name":"지역 최신 분기 이용률","purpose":"충북 최신 공개 분기 평균 이용률 확인","url":"https://recloud.energy.or.kr/rps/present/sub2_2_1.do?engy=1","update":"한국에너지공단 공개자료 갱신 시 자동 반영"},
+  {"name":"건축물 태양광 이용률","purpose":"건물 지붕 태양광 월별 평균 이용률 비교","url":"https://recloud.energy.or.kr/rps/present/sub2_3_1.do","update":"한국에너지공단 공개자료 갱신 시 자동 반영"},
+  {"name":"REC 발급/신청","purpose":"발급대상 발전량 확인 및 REC 발급 신청","url":"https://rps.energy.or.kr/CST_O2/O2_02_02_010_cst.do","update":"전력공급월 말일부터 90일 이내"},
+  {"name":"RPS 가중치 계산","purpose":"한국에너지공단 공식 REC 가중치 시뮬레이션","url":"https://rps.energy.or.kr/login2.do","update":"설비정보 변경 시"},
+  {"name":"태양광 사업성 분석","purpose":"SMP·REC·설비조건을 넣어 사업성 별도 분석","url":"https://renewables.co.kr/calculator","update":"외부 계산기"},
+  {"name":"발전효율 참고","purpose":"변환효율·인버터 출력효율·발전시간 개념 참고","url":"https://22tomorrow.tistory.com/entry/%ED%83%9C%EC%96%91%EA%B4%91-%EA%B4%80%EB%A0%A8-%ED%83%9C%EC%96%91%EA%B4%91-%ED%9A%A8%EC%9C%A8%EC%9D%B4%EB%9E%80-%EB%B3%80%ED%99%98%ED%9A%A8%EC%9C%A8-%EC%B6%9C%EB%A0%A5%ED%9A%A8%EC%9C%A8-%EB%B0%9C%EC%A0%84%ED%9A%A8%EC%9C%A8-%EC%9D%98%EB%AF%B8","update":"참고자료"},
+  {"name":"발전량 산정 참고","purpose":"일조시간·일사량·생산량 기반 발전량 계산식 참고","url":"https://elecpek.tistory.com/4","update":"참고자료"}
+]
