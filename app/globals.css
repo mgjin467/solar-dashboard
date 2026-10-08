@@ -248,3 +248,62 @@ td{white-space:nowrap}
   .benchmarkBarControl .benchmarkCompareSeg{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
   .benchmarkBarControl .benchmarkCompareSeg button{min-width:0!important;white-space:normal!important;padding:8px 6px!important}
 }
+
+/* Final fixed navigation: keep section navigation visible at the top on every scroll container/browser */
+.shell{padding-top:82px}
+.sectionNavBar{
+  position:fixed!important;
+  top:0!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  width:min(calc(100% - 48px),1452px)!important;
+  margin:0!important;
+  padding:10px 12px!important;
+  z-index:900!important;
+  border-radius:0 0 14px 14px!important;
+  background:rgba(255,255,255,.98)!important;
+  box-shadow:0 8px 24px rgba(15,23,42,.12)!important;
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+.stickyControls{position:relative!important;top:auto!important;z-index:1!important}
+.navTarget{scroll-margin-top:68px!important}
+
+/* REC lifecycle: only the five management totals requested */
+.recLifecycleKpis.recLifecycleKpis5{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:10px}
+.recIssueDateDetails{margin-bottom:0}
+.recIssueDateDetails>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;list-style:none;padding:2px 0;font-size:12px;color:#334155}
+.recIssueDateDetails>summary::-webkit-details-marker{display:none}
+.recIssueDateDetails>summary:after{content:'펼치기';font-size:10px;font-weight:800;color:#64748b;border:1px solid #cbd5e1;background:#fff;border-radius:999px;padding:4px 8px}
+.recIssueDateDetails[open]>summary:after{content:'접기'}
+.recIssueDateDetails[open]>summary{margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.recIssueDateDetails .recIssueDateTitle{margin-bottom:10px}
+.recIssuePreview{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.recIssuePreview span{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 8px;font-size:10px;color:#64748b}
+.recIssuePreview b{color:#0f172a}
+
+@media(max-width:1100px){
+  .recLifecycleKpis.recLifecycleKpis5{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:600px){
+  .shell{padding-top:64px!important}
+  .sectionNavBar{
+    left:8px!important;
+    right:8px!important;
+    transform:none!important;
+    width:auto!important;
+    padding:7px 8px!important;
+    border-radius:0 0 12px 12px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    flex-wrap:nowrap!important;
+    scrollbar-width:none;
+  }
+  .sectionNavBar::-webkit-scrollbar{display:none}
+  .sectionNavLink{flex:0 0 auto}
+  .navTarget{scroll-margin-top:58px!important}
+  .recLifecycleKpis.recLifecycleKpis5{grid-template-columns:1fr 1fr}
+  .recLifecycleKpis.recLifecycleKpis5>div:last-child{grid-column:1/-1}
+  .recIssueDateDetails>summary span{font-size:9px}
+  .recIssuePreview{display:grid;grid-template-columns:1fr}
+}
