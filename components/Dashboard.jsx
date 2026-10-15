@@ -12,17 +12,18 @@ async function readJsonResponse(response,label='요청'){
     throw new Error(`${label} 서버 응답 오류${status}: ${excerpt||'빈 응답'}${raw.length>180?'…':''}`);
   }
 }
-async function fetchDashboardResponse(url){
+async function fetchDashboardResponse(url,{signal}={}){
   let lastError=null;
   for(let attempt=0;attempt<2;attempt++){
     try{
-      const response=await fetch(url,{cache:'no-store'});
+      const response=await fetch(url,{cache:'no-store',signal});
       const json=await readJsonResponse(response,'대시보드');
       if(!response.ok)throw new Error(json?.error||json?.message||`데이터 조회 실패 (HTTP ${response.status})`);
       return json;
     }catch(e){
+      if(e?.name==='AbortError')throw e;
       lastError=e;
-      if(attempt===0)await new Promise(resolve=>setTimeout(resolve,700));
+      if(attempt===0)await new Promise(resolve=>setTimeout(resolve,500));
     }
   }
   throw lastError||new Error('대시보드 데이터를 불러오지 못했습니다.');
@@ -206,6 +207,9 @@ export default function Dashboard(){
   const [lifecyclePopup,setLifecyclePopup]=useState(null);
   const [data,setData]=useState(null),[loading,setLoading]=useState(false),[error,setError]=useState(''),[diag,setDiag]=useState(null),[diagLoading,setDiagLoading]=useState(false);
   const chartRef=useRef(null);
+  const dashboardRequestCacheRef=useRef(new Map());
+  const dashboardAbortRef=useRef(null);
+  const dashboardLoadSeqRef=useRef(0);
   const recChartRef=useRef(null);
   const projectChartRef=useRef(null);
   const regionPickerRef=useRef(null);
@@ -263,13 +267,28 @@ export default function Dashboard(){
   const saveRecSupplyRatio=(v)=>{const c=v.replace(/[^0-9.]/g,'');setRecSupplyRatioPct(c);try{localStorage.setItem('solar_rec_supply_ratio_pct',c)}catch{}};
   const applyPreset=(k)=>{setPeriodPreset(k);if(k==='custom')return;if(k==='all'&&data?.generationRange?.start){setStart(data.generationRange.start);setEnd(data.generationRange.end||localIso());return}const p=presets()[k];setStart(localIso(p[0]));setEnd(localIso(p[1]));};
   const load=useCallback(async(forceRefresh=false)=>{
+    const discountRate=Math.max(0,Number(projectDiscountRatePct)||0)/100;
+    const baseParams={grain,start,end,compare:compare.join(','),cap1:String(c1),cap2:String(c2),recSupplyRatio:String(recSupplyRatio),summaryKey,discountRate:String(discountRate)};
+    const cacheKey=new URLSearchParams(baseParams).toString();
+    if(!forceRefresh&&dashboardRequestCacheRef.current.has(cacheKey)){
+      setData(dashboardRequestCacheRef.current.get(cacheKey));setError('');setLoading(false);return;
+    }
+    dashboardAbortRef.current?.abort();
+    const controller=new AbortController();dashboardAbortRef.current=controller;
+    const seq=++dashboardLoadSeqRef.current;
     setLoading(true);setError('');
     try{
-      const discountRate=Math.max(0,Number(projectDiscountRatePct)||0)/100;const q=new URLSearchParams({grain,start,end,compare:compare.join(','),cap1:String(c1),cap2:String(c2),recSupplyRatio:String(recSupplyRatio),summaryKey,discountRate:String(discountRate),ts:String(Date.now()),forceSmp:forceRefresh?'1':'0'});
-      const j=await fetchDashboardResponse(`/api/dashboard?${q}`);setData(j)
-    }catch(e){setError(e.message||String(e))}finally{setLoading(false)}
+      const q=new URLSearchParams({...baseParams,ts:String(Date.now()),forceSmp:forceRefresh?'1':'0'});
+      const j=await fetchDashboardResponse(`/api/dashboard?${q}`,{signal:controller.signal});
+      if(seq!==dashboardLoadSeqRef.current)return;
+      dashboardRequestCacheRef.current.set(cacheKey,j);
+      while(dashboardRequestCacheRef.current.size>12)dashboardRequestCacheRef.current.delete(dashboardRequestCacheRef.current.keys().next().value);
+      if(forceRefresh){const keep=j;dashboardRequestCacheRef.current.clear();dashboardRequestCacheRef.current.set(cacheKey,keep)}
+      setData(j);
+    }catch(e){if(e?.name!=='AbortError'&&seq===dashboardLoadSeqRef.current)setError(e.message||String(e))}finally{if(seq===dashboardLoadSeqRef.current)setLoading(false)}
   },[grain,start,end,compare,c1,c2,recSupplyRatio,summaryKey,projectDiscountRatePct]);
-  useEffect(()=>{load(false)},[load]);
+  useEffect(()=>{const timer=setTimeout(()=>load(false),180);return()=>clearTimeout(timer)},[load]);
+  useEffect(()=>()=>dashboardAbortRef.current?.abort(),[]);
   const runDiagnostics=useCallback(async()=>{setDiagLoading(true);try{const r=await fetch(`/api/diagnostics?ts=${Date.now()}`,{cache:'no-store'});setDiag(await readJsonResponse(r,'진단'))}catch(e){setDiag({error:e.message||String(e)})}finally{setDiagLoading(false)}},[]);
   const saveRecTransaction=useCallback(async()=>{
     setRecTxnSaving(true);setRecTxnMessage('');
@@ -560,7 +579,7 @@ ${String(r.periodStart||'').slice(0,7)}~${String(r.periodEnd||'').slice(0,7)}`),
 
   <div className="zeroDayRuleNotice">평균·설비이용률·일평균 등가시간 등은 <b>발전량 0인 날을 제외</b>하여 계산합니다.</div><section className="kpis kpis6"><Kpi label={`${inverterLabels[inverterMode]} 발전량`} value={data?`${one.format(selectedGeneration||0)} kWh`:'-'}/><Kpi label="SMP 기준 수익" value={data?`${nf.format(data.kpi.totalRevenue)} 원`:'-'}/><Kpi label="평균 SMP" value={data?.kpi.weightedSmp!=null?`${two.format(data.kpi.weightedSmp)} 원/kWh`:'공식값 없음'}/><Kpi label="설비이용률" value={selectedEfficiency!=null?`${two.format(selectedEfficiency)} %`:totalCap?'계산 불가':'용량 입력 필요'}/><Kpi label="등가 발전시간" value={selectedGenerationHours!=null?`${two.format(selectedGenerationHours)} h`:'-'}/><Kpi label="일평균 등가시간" value={selectedAvgDailyGenerationHours!=null?`${two.format(selectedAvgDailyGenerationHours)} h/일`:'-'}/></section>
 
-  <section id="main-chart" className="card chartCard navTarget"><div className="sectionTitle"><div><h2>{barMetricLabels[barMetric]} 막대 + {lineMetricLabels[lineMetric]} 라인 · {inverterLabels[inverterMode]}{regionComparable&&showRegion?' · 전국·지역 라인 비교':''}{benchmarkBarMetric!=='off'?` · 전국·지역 ${barMetricLabels[benchmarkBarMetric]} 막대 비교`:''}</h2><p>그래프 위에서 휠/두 손가락으로 확대·축소, 드래그로 이동할 수 있습니다.</p></div><span className="pill">발전파일 {data?.fileCount??0}개</span></div><div className="chartWrap"><ReactECharts key={chartKey} ref={chartRef} option={option} notMerge={true} lazyUpdate={false} style={{height:'100%',width:'100%'}} opts={{renderer:'canvas'}}/></div></section>
+  <section id="main-chart" className="card chartCard navTarget"><div className="sectionTitle"><div><h2>{barMetricLabels[barMetric]} 막대 + {lineMetricLabels[lineMetric]} 라인 · {inverterLabels[inverterMode]}{regionComparable&&showRegion?' · 전국·지역 라인 비교':''}{benchmarkBarMetric!=='off'?` · 전국·지역 ${barMetricLabels[benchmarkBarMetric]} 막대 비교`:''}</h2><p>그래프 위에서 휠/두 손가락으로 확대·축소, 드래그로 이동할 수 있습니다.</p></div><span className="pill">발전파일 {data?.fileCount??0}개 · 루트 원본</span></div><div className="chartWrap"><ReactECharts key={chartKey} ref={chartRef} option={option} notMerge={true} lazyUpdate={false} style={{height:'100%',width:'100%'}} opts={{renderer:'canvas'}}/></div></section>
 
   {(regionComparable||benchmarkBarMetric!=='off')&&data?.benchmark&&<section className="card benchmarkCard"><div><b>전국·지역 평균 비교</b><strong>{selectedRegions.length?`${selectedRegions.length}개 지역 + 전국`:'전국'}</strong></div><p>REcloud 월별 이용률 기준년도는 <b>{data.benchmark.year}년</b>이며, 선택 지역은 {selectedRegions.length?selectedRegions.join(', '):'없음'}입니다. 발전량은 선택 설비용량으로 환산하고 수익은 해당 구간 SMP를 적용합니다. <b>제주 평균 수익은 제주 전용 SMP</b>, 그 외 지역과 전국은 같은 육지 SMP를 사용합니다. SMP 라인 비교도 육지는 중복 표시하지 않고 제주를 선택한 경우에만 제주 SMP를 추가합니다.</p><div className="termNote"><b>표시 기준:</b> 전국·지역 평균 발전량/수익은 소수점 반올림 후 자연수로 표시합니다. REcloud의 월별 지역 이용률 공개 기준년도와 조회 대상 연도가 다를 때에는 현재 공개 월별 프로필을 비교 기준으로 환산합니다.</div>{data.benchmark.errors?.length>0&&<div className="benchmarkErr">{data.benchmark.errors.join(' / ')}</div>}</section>}
 
