@@ -1,0 +1,5 @@
+import {NextResponse} from 'next/server';
+import {saveRecSupplyRatioOverride,deleteRecSupplyRatioOverride} from '@/lib/rec';
+export const runtime='nodejs';export const dynamic='force-dynamic';export const maxDuration=60;
+export async function POST(request){try{const body=await request.json();const saved=await saveRecSupplyRatioOverride(body||{});return NextResponse.json({ok:true,saved},{headers:{'Cache-Control':'no-store'}})}catch(e){return NextResponse.json({ok:false,message:e?.message||String(e)},{status:400,headers:{'Cache-Control':'no-store'}})}}
+export async function DELETE(request){try{const body=await request.json();const deleted=await deleteRecSupplyRatioOverride(body?.month||'');return NextResponse.json({ok:true,deleted},{headers:{'Cache-Control':'no-store'}})}catch(e){return NextResponse.json({ok:false,message:e?.message||String(e)},{status:400,headers:{'Cache-Control':'no-store'}})}}
