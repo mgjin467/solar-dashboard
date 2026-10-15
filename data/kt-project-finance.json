@@ -37,7 +37,10 @@
     "financingRepaymentSupplyTotal": 166938000,
     "financingRepaymentVatTotal": 16693800,
     "financingRepaymentInclVat": 183631800,
-    "totalClientCashOutInclVat": 198620700
+    "totalClientCashOutInclVat": 198620700,
+    "planFirstYearGenerationKwh": 262327,
+    "planFirstYearGenerationBasis": "199.64 kW × 3.60 h/일 × 365일 = 262,326.96 kWh → 계획서 표기 262,327 kWh",
+    "planGenerationSourceNote": "계약 경제성 분석표의 1~20년차 발전량·수익 표기값을 그대로 사용"
   },
   "costBreakdown": [
     {

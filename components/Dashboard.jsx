@@ -539,6 +539,7 @@ ${String(r.periodStart||'').slice(0,7)}~${String(r.periodEnd||'').slice(0,7)}`),
       <div className="projectSourceLinks noPrint"><a href={project.source?.contractPath||'/docs/solar-contract-KT-JCPC-2021-07-10.pdf'} target="_blank" rel="noreferrer">계약서 PDF ↗</a>{project.source?.repaymentUrl&&<a href={project.source.repaymentUrl} target="_blank" rel="noreferrer">계산서 발행 및 입출금 내역 ↗</a>}</div>
     </div>
     <div className="projectFinancePeriodBanner"><b>금융연차 기준</b><span>{project.financeCalendar?.rule||'-'}</span><strong>1년차 {project.financeCalendar?.start||'-'} ~ {projectComparisonRows[0]?.periodEnd||'-'}</strong></div>
+    <div className="projectFinancePeriodBanner projectPlanBasisBanner"><b>계약 경제성 분석표 1년차 발전계획</b><span>{project.contract?.planFirstYearGenerationBasis||'계약 경제성 분석표의 연차별 발전량 표기값을 그대로 사용'}</span><strong>{nf.format(project.contract?.planFirstYearGenerationKwh||project.planYears?.[0]?.generationKwh||0)} kWh</strong></div>
     <div className="projectKpis projectStatusKpis">
       <div><span>20년 계획수익</span><strong>{nf.format(project.contract?.planTotalRevenue20Years||0)} 원</strong><small>계약 경제성 분석표 기준</small></div>
       <div><span>실적반영 20년 전망수익</span><strong>{nf.format(project.investmentMetrics?.forecastRevenue20YearsWon||0)} 원</strong><small>{project.investmentMetrics?.forecastThrough||'-'}까지 실적 + 잔여기간 계획</small></div>
