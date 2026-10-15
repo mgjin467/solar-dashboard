@@ -1,0 +1,545 @@
+{
+  "source": "사용자 첨부 REC 발급현황 2022~2026",
+  "rows": [
+    {
+      "month": "2022-02",
+      "supplyKwh": 13013.0,
+      "issuedRec": 19.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-03",
+      "supplyKwh": 17037.0,
+      "issuedRec": 26.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-04",
+      "supplyKwh": 22218.0,
+      "issuedRec": 33.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-05",
+      "supplyKwh": 17308.0,
+      "issuedRec": 26.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-06",
+      "supplyKwh": 18190.0,
+      "issuedRec": 27.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-07",
+      "supplyKwh": 19247.0,
+      "issuedRec": 29.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-08",
+      "supplyKwh": 14731.0,
+      "issuedRec": 22.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-09",
+      "supplyKwh": 18249.0,
+      "issuedRec": 27.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-10",
+      "supplyKwh": 16445.0,
+      "issuedRec": 25.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-11",
+      "supplyKwh": 12082.0,
+      "issuedRec": 18.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2022-12",
+      "supplyKwh": 8536.0,
+      "issuedRec": 13.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2022(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-01",
+      "supplyKwh": 12750.0,
+      "issuedRec": 19.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-02",
+      "supplyKwh": 13994.0,
+      "issuedRec": 21.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-03",
+      "supplyKwh": 19554.0,
+      "issuedRec": 30.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-04",
+      "supplyKwh": 12389.0,
+      "issuedRec": 18.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-05",
+      "supplyKwh": 14298.0,
+      "issuedRec": 22.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-06",
+      "supplyKwh": 13771.0,
+      "issuedRec": 20.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-07",
+      "supplyKwh": 10723.0,
+      "issuedRec": 16.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-08",
+      "supplyKwh": 11497.0,
+      "issuedRec": 18.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-09",
+      "supplyKwh": 9965.0,
+      "issuedRec": 14.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-10",
+      "supplyKwh": 10099.0,
+      "issuedRec": 16.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-11",
+      "supplyKwh": 8219.0,
+      "issuedRec": 12.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2023-12",
+      "supplyKwh": 5784.0,
+      "issuedRec": 9.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2023(1).xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-01",
+      "supplyKwh": 6944.0,
+      "issuedRec": 10.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-02",
+      "supplyKwh": 5944.0,
+      "issuedRec": 9.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-03",
+      "supplyKwh": 11189.0,
+      "issuedRec": 17.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-04",
+      "supplyKwh": 11590.0,
+      "issuedRec": 17.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-05",
+      "supplyKwh": 14764.0,
+      "issuedRec": 22.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-06",
+      "supplyKwh": 14166.0,
+      "issuedRec": 22.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-07",
+      "supplyKwh": 9725.0,
+      "issuedRec": 14.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-08",
+      "supplyKwh": 12499.0,
+      "issuedRec": 19.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-09",
+      "supplyKwh": 9986.0,
+      "issuedRec": 15.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-10",
+      "supplyKwh": 7982.0,
+      "issuedRec": 12.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-11",
+      "supplyKwh": 7034.0,
+      "issuedRec": 10.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2024-12",
+      "supplyKwh": 6968.0,
+      "issuedRec": 11.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2024.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-01",
+      "supplyKwh": 6732.0,
+      "issuedRec": 10.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-02",
+      "supplyKwh": 10265.0,
+      "issuedRec": 15.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-03",
+      "supplyKwh": 11339.0,
+      "issuedRec": 17.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-04",
+      "supplyKwh": 13908.0,
+      "issuedRec": 21.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-05",
+      "supplyKwh": 12734.0,
+      "issuedRec": 19.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-06",
+      "supplyKwh": 12541.0,
+      "issuedRec": 19.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-07",
+      "supplyKwh": 12651.0,
+      "issuedRec": 19.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-08",
+      "supplyKwh": 11822.0,
+      "issuedRec": 18.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-09",
+      "supplyKwh": 8624.0,
+      "issuedRec": 13.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-10",
+      "supplyKwh": 7362.0,
+      "issuedRec": 11.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-11",
+      "supplyKwh": 8701.0,
+      "issuedRec": 13.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2025-12",
+      "supplyKwh": 6560.0,
+      "issuedRec": 10.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2025.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2026-01",
+      "supplyKwh": 8702.0,
+      "issuedRec": 13.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2026.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2026-02",
+      "supplyKwh": 9080.0,
+      "issuedRec": 13.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2026.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2026-03",
+      "supplyKwh": 11962.0,
+      "issuedRec": 18.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2026.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2026-04",
+      "supplyKwh": 12717.0,
+      "issuedRec": 19.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2026.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2026-05",
+      "supplyKwh": 14226.0,
+      "issuedRec": 22.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2026.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2026-06",
+      "supplyKwh": 14091.0,
+      "issuedRec": 21.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2026.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    },
+    {
+      "month": "2026-07",
+      "supplyKwh": 10740.0,
+      "issuedRec": 16.0,
+      "facilityCode": "PV15-R-056340",
+      "plantName": "주식회사 진천피씨",
+      "sourceFile": "REC 발급현황_2026.xlsx",
+      "sourceType": "첨부 REC 발급현황",
+      "trustedMonthly": true
+    }
+  ]
+}

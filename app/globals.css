@@ -443,3 +443,4 @@ body.pdfReportMode .projectChartWrap{height:340px!important}
   a[href]{text-decoration:none!important;color:inherit!important}
 }
 @media print{.recMonthlyTable{display:none!important}.recCard>.tableScroll:has(.recMonthlyTable){display:none!important}}
+.recValueRuleNote{display:flex;gap:10px;align-items:flex-start;margin:10px 0;padding:9px 11px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;font-size:10px;line-height:1.5;color:#1e3a8a}.recValueRuleNote b{white-space:nowrap;color:#1e40af}.recValueRuleNote span b{white-space:normal}@media(max-width:600px){.recValueRuleNote{display:block}.recValueRuleNote>b{display:block;margin-bottom:4px}}
