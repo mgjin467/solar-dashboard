@@ -3,6 +3,31 @@ import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import ReactECharts from 'echarts-for-react';
 
 const nf=new Intl.NumberFormat('ko-KR');
+async function readJsonResponse(response,label='요청'){
+  const raw=await response.text();
+  if(!raw)return{};
+  try{return JSON.parse(raw)}catch{
+    const excerpt=raw.replace(/\s+/g,' ').trim().slice(0,180);
+    const status=response.status?` HTTP ${response.status}`:'';
+    throw new Error(`${label} 서버 응답 오류${status}: ${excerpt||'빈 응답'}${raw.length>180?'…':''}`);
+  }
+}
+async function fetchDashboardResponse(url){
+  let lastError=null;
+  for(let attempt=0;attempt<2;attempt++){
+    try{
+      const response=await fetch(url,{cache:'no-store'});
+      const json=await readJsonResponse(response,'대시보드');
+      if(!response.ok)throw new Error(json?.error||json?.message||`데이터 조회 실패 (HTTP ${response.status})`);
+      return json;
+    }catch(e){
+      lastError=e;
+      if(attempt===0)await new Promise(resolve=>setTimeout(resolve,700));
+    }
+  }
+  throw lastError||new Error('대시보드 데이터를 불러오지 못했습니다.');
+}
+
 const one=new Intl.NumberFormat('ko-KR',{maximumFractionDigits:1});
 const two=new Intl.NumberFormat('ko-KR',{minimumFractionDigits:2,maximumFractionDigits:2});
 const three=new Intl.NumberFormat('ko-KR',{minimumFractionDigits:3,maximumFractionDigits:3});
@@ -210,7 +235,7 @@ export default function Dashboard(){
   useEffect(()=>{
     if(recPriceMode!=='date'){setRecPriceLookup(null);return}
     let cancelled=false;setRecPriceLoading(true);
-    fetch(`/api/rec-price?date=${encodeURIComponent(recPriceDate)}&ts=${Date.now()}`,{cache:'no-store'}).then(async r=>{const j=await r.json();if(!cancelled)setRecPriceLookup(j)}).catch(e=>{if(!cancelled)setRecPriceLookup({ok:false,message:e.message||String(e)})}).finally(()=>{if(!cancelled)setRecPriceLoading(false)});
+    fetch(`/api/rec-price?date=${encodeURIComponent(recPriceDate)}&ts=${Date.now()}`,{cache:'no-store'}).then(async r=>{const j=await readJsonResponse(r,'REC 시세');if(!cancelled)setRecPriceLookup(j)}).catch(e=>{if(!cancelled)setRecPriceLookup({ok:false,message:e.message||String(e)})}).finally(()=>{if(!cancelled)setRecPriceLoading(false)});
     return()=>{cancelled=true};
   },[recPriceMode,recPriceDate]);
   useEffect(()=>{
@@ -241,17 +266,17 @@ export default function Dashboard(){
     setLoading(true);setError('');
     try{
       const discountRate=Math.max(0,Number(projectDiscountRatePct)||0)/100;const q=new URLSearchParams({grain,start,end,compare:compare.join(','),cap1:String(c1),cap2:String(c2),recSupplyRatio:String(recSupplyRatio),summaryKey,discountRate:String(discountRate),ts:String(Date.now()),forceSmp:forceRefresh?'1':'0'});
-      const r=await fetch(`/api/dashboard?${q}`,{cache:'no-store'});const j=await r.json();if(!r.ok)throw new Error(j.error||'데이터 조회 실패');setData(j)
+      const j=await fetchDashboardResponse(`/api/dashboard?${q}`);setData(j)
     }catch(e){setError(e.message||String(e))}finally{setLoading(false)}
   },[grain,start,end,compare,c1,c2,recSupplyRatio,summaryKey,projectDiscountRatePct]);
   useEffect(()=>{load(false)},[load]);
-  const runDiagnostics=useCallback(async()=>{setDiagLoading(true);try{const r=await fetch(`/api/diagnostics?ts=${Date.now()}`,{cache:'no-store'});setDiag(await r.json())}catch(e){setDiag({error:e.message||String(e)})}finally{setDiagLoading(false)}},[]);
+  const runDiagnostics=useCallback(async()=>{setDiagLoading(true);try{const r=await fetch(`/api/diagnostics?ts=${Date.now()}`,{cache:'no-store'});setDiag(await readJsonResponse(r,'진단'))}catch(e){setDiag({error:e.message||String(e)})}finally{setDiagLoading(false)}},[]);
   const saveRecTransaction=useCallback(async()=>{
     setRecTxnSaving(true);setRecTxnMessage('');
     try{
       const body={id:recTxnForm.id||'',type:recTxnForm.type||'monetized',date:recTxnForm.date,qty:Number(recTxnForm.qty)||0,amount:recTxnForm.type==='monetized'?(Number(String(recTxnForm.amount||'').replace(/,/g,''))||0):0,note:recTxnForm.note||''};
       const r=await fetch('/api/rec-manual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-      const j=await r.json();if(!r.ok)throw new Error(j.message||'저장 실패');
+      const j=await readJsonResponse(r,'REC 저장');if(!r.ok)throw new Error(j.message||'저장 실패');
       setRecTxnMessage(recTxnForm.id?'수정되었습니다.':'저장되었습니다.');
       setRecTxnForm({id:'',type:'monetized',date:localIso(),qty:'',amount:'',note:''});
       await load(false);
@@ -259,18 +284,18 @@ export default function Dashboard(){
   },[recTxnForm,load]);
   const editRecTransaction=useCallback((t)=>{setRecTxnForm({id:t.id||'',type:t.type==='issued'?'issued':t.type==='disposed'?'disposed':'monetized',date:t.date||localIso(),qty:String(t.qty??t.issuedQty??t.monetizedQty??t.disposedQty??''),amount:t.type==='monetized'?String(t.amount??t.monetizedAmount??''):'',note:t.note||''});setRecTxnMessage('');},[]);
   const cancelRecTransactionEdit=useCallback(()=>{setRecTxnForm({id:'',type:'monetized',date:localIso(),qty:'',amount:'',note:''});setRecTxnMessage('');},[]);
-  const deleteRecTransaction=useCallback(async(t)=>{if(!t?.id)return;if(typeof window!=='undefined'&&!window.confirm(`${t.type==='issued'?'발급':t.type==='disposed'?'폐기':'수익화'} ${two.format(Number(t.qty??t.issuedQty??t.monetizedQty??t.disposedQty??0))} REC 내역을 삭제하시겠습니까?`))return;setRecTxnSaving(true);setRecTxnMessage('');try{const r=await fetch('/api/rec-manual',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.id})});const j=await r.json();if(!r.ok)throw new Error(j.message||'삭제 실패');if(recTxnForm.id===t.id)setRecTxnForm({id:'',type:'monetized',date:localIso(),qty:'',amount:'',note:''});setRecTxnMessage('삭제되었습니다.');await load(false)}catch(e){setRecTxnMessage(e.message||String(e))}finally{setRecTxnSaving(false)}},[load,recTxnForm.id]);
+  const deleteRecTransaction=useCallback(async(t)=>{if(!t?.id)return;if(typeof window!=='undefined'&&!window.confirm(`${t.type==='issued'?'발급':t.type==='disposed'?'폐기':'수익화'} ${two.format(Number(t.qty??t.issuedQty??t.monetizedQty??t.disposedQty??0))} REC 내역을 삭제하시겠습니까?`))return;setRecTxnSaving(true);setRecTxnMessage('');try{const r=await fetch('/api/rec-manual',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.id})});const j=await readJsonResponse(r,'REC 삭제');if(!r.ok)throw new Error(j.message||'삭제 실패');if(recTxnForm.id===t.id)setRecTxnForm({id:'',type:'monetized',date:localIso(),qty:'',amount:'',note:''});setRecTxnMessage('삭제되었습니다.');await load(false)}catch(e){setRecTxnMessage(e.message||String(e))}finally{setRecTxnSaving(false)}},[load,recTxnForm.id]);
   const saveRecIssueDate=useCallback(async()=>{
     setRecIssueSaving(true);setRecIssueMessage('');
     try{
       const r=await fetch('/api/rec-issue-date',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(recIssueForm)});
-      const j=await r.json();if(!r.ok)throw new Error(j.message||'발급일 저장 실패');
+      const j=await readJsonResponse(r,'REC 발급일 저장');if(!r.ok)throw new Error(j.message||'발급일 저장 실패');
       setRecIssueMessage('발급일 수정값이 저장되었습니다.');
       await load(false);
     }catch(e){setRecIssueMessage(e.message||String(e))}finally{setRecIssueSaving(false)}
   },[recIssueForm,load]);
   const editRecIssueDate=useCallback((lot)=>{setRecIssueForm({month:lot.month||'',issueDate:lot.issueDate||'',note:''});setRecIssueMessage('');},[]);
-  const saveMaintenance=useCallback(async()=>{setMaintenanceSaving(true);setMaintenanceMessage('');try{const body={...maintenanceForm,amount:Number(String(maintenanceForm.amount||'').replace(/,/g,''))||0};const r=await fetch('/api/project-maintenance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!r.ok)throw new Error(j.message||'유지보수비 저장 실패');setMaintenanceMessage(maintenanceForm.id?'수정되었습니다.':'저장되었습니다.');setMaintenanceForm({id:'',date:localIso(),amount:'',category:'유지보수',vendor:'',note:''});await load(false)}catch(e){setMaintenanceMessage(e.message||String(e))}finally{setMaintenanceSaving(false)}},[maintenanceForm,load]);
+  const saveMaintenance=useCallback(async()=>{setMaintenanceSaving(true);setMaintenanceMessage('');try{const body={...maintenanceForm,amount:Number(String(maintenanceForm.amount||'').replace(/,/g,''))||0};const r=await fetch('/api/project-maintenance',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const j=await readJsonResponse(r,'유지보수비 저장');if(!r.ok)throw new Error(j.message||'유지보수비 저장 실패');setMaintenanceMessage(maintenanceForm.id?'수정되었습니다.':'저장되었습니다.');setMaintenanceForm({id:'',date:localIso(),amount:'',category:'유지보수',vendor:'',note:''});await load(false)}catch(e){setMaintenanceMessage(e.message||String(e))}finally{setMaintenanceSaving(false)}},[maintenanceForm,load]);
   const editMaintenance=useCallback((x)=>{setMaintenanceForm({id:x.id||'',date:x.date||localIso(),amount:String(x.amount||''),category:x.category||'유지보수',vendor:x.vendor||'',note:x.note||''});setMaintenanceMessage('')},[]);
   const cancelMaintenanceEdit=useCallback(()=>{setMaintenanceForm({id:'',date:localIso(),amount:'',category:'유지보수',vendor:'',note:''});setMaintenanceMessage('')},[]);
 
