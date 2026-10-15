@@ -523,7 +523,7 @@ export default function Dashboard(){
   const recTransactions=useMemo(()=>[...(data?.rec?.ledger?.transactions||[])].sort((a,b)=>String(b?.date||'').localeCompare(String(a?.date||''))||String(b?.updatedAt||'').localeCompare(String(a?.updatedAt||''))),[data?.rec?.ledger?.transactions]);
   const recSupplyOverrides=useMemo(()=>[...(data?.rec?.ledger?.supplyRatioOverrides||[])].sort((a,b)=>String(b?.month||'').localeCompare(String(a?.month||''))),[data?.rec?.ledger?.supplyRatioOverrides]);
   const recSupplyMonthOptions=useMemo(()=>[...(data?.rec?.recentMonths||[])].map(r=>String(r.month||'').slice(0,7)).filter((v,i,a)=>/^20\d{2}-\d{2}$/.test(v)&&a.indexOf(v)===i).sort((a,b)=>b.localeCompare(a)),[data?.rec?.recentMonths]);
-  const recSelectedValuationAmount=recValuationPrice==null?null:Math.round(Number(data?.rec?.ledger?.projectedRemainingRec??data?.rec?.projectedRemainingRec??data?.rec?.ledger?.remainingRec||0)*Number(recValuationPrice));
+  const recSelectedValuationAmount=recValuationPrice==null?null:Math.round(Number(data?.rec?.ledger?.projectedRemainingRec??data?.rec?.projectedRemainingRec??data?.rec?.ledger?.remainingRec??0)*Number(recValuationPrice));
   const recProjectedTotalIncome=recSelectedValuationAmount==null?null:Math.round(Number(data?.rec?.ledger?.cumulativeMonetizedAmount||0)+Number(recSelectedValuationAmount||0));
   const recRowValuationAmount=(r)=>{const q=r?.valuationRemainingQty??r?.lifecycleRemaining;return recValuationPrice!=null&&q!=null?Math.round(Number(q||0)*Number(recValuationPrice)):null};
   const recIssueLots=data?.rec?.ledger?.issueDateLots||data?.rec?.ledger?.lots||[];
